@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NEUROCADE</title>
+<style>
+  body {
+    font-family: 'Orbitron', sans-serif;
+    background: radial-gradient(circle at center, #0a0a0a, #000);
+    color: #fff;
+    text-align: center;
+    margin: 0;
+  }
+  h1 {
+    font-size: 4rem;
+    color: cyan;
+    text-shadow: 0 0 10px magenta, 0 0 20px magenta, 0 0 30px cyan;
+    margin-top: 40px;
+  }
+  button {
+    padding: 15px 30px;
+    font-size: 1.5rem;
+    background: magenta;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    box-shadow: 0 0 10px cyan, 0 0 20px magenta;
+  }
+  #gameScreen {
+    display: none;
+    margin-top: 20px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 100px);
+    grid-gap: 10px;
+    justify-content: center;
+    margin: 20px auto;
+  }
+  .card {
+    width: 100px;
+    height: 100px;
+    background: #222;
+    border: 2px solid cyan;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    cursor: pointer;
+    user-select: none;
+  }
+  .hidden {
+    background: #111;
+    color: transparent;
+  }
+  #feedback {
+    font-size: 1.2rem;
+    margin-top: 10px;
+    height: 1.5rem;
+  }
+  #winner {
+    display: none;
+    font-size: 2rem;
+    margin-top: 20px;
+    color: yellow;
+    text-shadow: 0 0 10px orange, 0 0 20px red;
+  }
+  #chicken {
+    display: none;
+    width: 200px;
+    margin-top: 20px;
+  }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;900&display=swap" rel="stylesheet">
+</head>
+<body>
+<div id="homeScreen">
+  <h1>NEUROCADE</h1>
+  <button onclick="startGame()">Start Memory Match</button>
+</div>
+
+<div id="gameScreen">
+  <div class="grid" id="grid"></div>
+  <div id="feedback"></div>
+  <div id="winner">Winner Winner Chicken Dinner!</div>
+  <img id="chicken" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..." alt="Dancing Chicken">
+  <br>
+  <button onclick="goHome()">Back to Home</button>
+</div>
+
+<audio id="ding" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
+<audio id="buzzer" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"></audio>
+
+<script>
+const items = ['🍎','🚗','🥕','⚽','👕','🍌','🚲','🥦'];
+let gridData = [];
+let firstCard = null;
+let lockBoard = false;
+let matchesFound = 0;
+
+function startGame() {
+  document.getElementById('homeScreen').style.display = 'none';
+  document.getElementById('gameScreen').style.display = 'block';
+  setupGrid();
+}
+
+function goHome() {
+  document.getElementById('homeScreen').style.display = 'block';
+  document.getElementById('gameScreen').style.display = 'none';
+  document.getElementById('winner').style.display = 'none';
+  document.getElementById('chicken').style.display = 'none';
+  document.getElementById('feedback').innerText = '';
+}
+
+function setupGrid() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  matchesFound = 0;
+  const pairList = [...items, ...items];
+  gridData = pairList.sort(() => 0.5 - Math.random());
+
+  gridData.forEach((item, index) => {
+    const card = document.createElement('div');
+    card.classList.add('card','hidden');
+    card.dataset.index = index;
+    card.innerText = item;
+    card.addEventListener('click', () => flipCard(card));
+    grid.appendChild(card);
+  });
+}
+
+function flipCard(card) {
+  if (lockBoard || !card.classList.contains('hidden')) return;
+  card.classList.remove('hidden');
+
+  if (!firstCard) {
+    firstCard = card;
+    return;
+  }
+
+  const secondCard = card;
+  checkMatch(firstCard, secondCard);
+  firstCard = null;
+}
+
+function checkMatch(card1, card2) {
+  if (card1.innerText === card2.innerText) {
+    document.getElementById('feedback').innerText = Math.random() > 0.5 ? 'MATCH!' : 'Good job!';
+    document.getElementById('ding').play();
+    matchesFound++;
+    if (matchesFound === items.length) {
+      endGame();
+    }
+  } else {
+    document.getElementById('feedback').innerText = Math.random() > 0.5 ? 'Not quite right' : 'Oops, try again!';
+    document.getElementById('buzzer').play();
+    lockBoard = true;
+    setTimeout(() => {
+      card1.classList.add('hidden');
+      card2.classList.add('hidden');
+      lockBoard = false;
+    }, 1000);
+  }
+}
+
+function endGame() {
+  document.getElementById('winner').style.display = 'block';
+  document.getElementById('chicken').style.display = 'block';
+}
+</script>
+</body>
+</html>
