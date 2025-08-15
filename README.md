@@ -1,5 +1,5 @@
 ## Hi there 👋
-- 🔭 I’m currently working on ...figueing out how to use github
+- 🔭 I’m currently working on ...figuring out how to use github
 - 🌱 I’m currently learning ...basically everything. I have no idea what I am doing.
 
 <!--
