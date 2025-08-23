@@ -1,5 +1,7 @@
-- 🔭 I’m currently working on ...figuring out how to use github
+- 🔭 I’m currently working on ...figuring out how to use html, js, css, github, git bash
 - 🌱 I’m currently learning ...basically everything. I have no idea what I am doing.
+
+https://github.com/Neurocade/Neurocade.git
 
 <!--
 **Neurocade/Neurocade** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
