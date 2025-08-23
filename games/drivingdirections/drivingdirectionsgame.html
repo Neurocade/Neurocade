@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Memory City Drive</title>
+  <link rel="stylesheet" href="../../style.css">
+  <style>
+    /* Game-specific styles */
+    #title-screen, #game-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      width: 100%;
+      padding: 20px;
+      text-align: center;
+    }
+
+    #title-screen.hidden, #game-screen.hidden {
+      display: none;
+    }
+
+    #status-text {
+      font-size: 1.5rem;
+      color: yellow;
+      margin-bottom: 15px;
+      min-height: 2em;
+    }
+
+    #score-counter {
+      font-family: 'Courier New', monospace;
+      font-size: 2rem;
+      color: lime;
+      text-shadow: 0 0 5px green;
+      margin-bottom: 10px;
+    }
+
+    #speedometer {
+      font-size: 1.2rem;
+      color: cyan;
+      margin-bottom: 10px;
+    }
+
+    canvas {
+      border: 3px solid #0f0;
+      background: #2d2d2d;
+      margin-bottom: 10px;
+    }
+
+    #start-game, .back-home {
+      padding: 12px 24px;
+      font-size: 1rem;
+      margin: 5px;
+      cursor: pointer;
+    }
+
+    #win-overlay {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.85);
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+      z-index: 10;
+    }
+
+    #win-overlay .overlay-content h2 {
+      color: yellow;
+      font-size: 2rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body class="arcade-screen">
+
+  <!-- Title Screen -->
+  <div id="title-screen">
+    <h1>Memory City Drive</h1>
+    <p>
+      You will be given a set of directions. Read them carefully, paying close attention to mentioned landmarks and turns, because you will have to follow these directions from memory to reach your destination. You will be deducted points for each wrong turn you make! Drive carefully!
+    </p>
+    <button id="start-game">Start Game</button>
+    <button class="back-home">Back to Home</button>
+  </div>
+
+  <!-- Game Screen -->
+  <div id="game-screen" class="hidden">
+    <div id="status-text">Get Ready...</div>
+    <div id="score-counter">00000</div>
+    <div id="speedometer">Speed: 0 mph</div>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <button class="back-home">Back to Home</button>
+  </div>
+
+  <!-- Win Overlay -->
+  <div id="win-overlay">
+    <div class="overlay-content">
+      <h2 id="win-message">You Win!</h2>
+      <button id="play-again">Play Again</button>
+      <button id="back-home-win">Back to Home</button>
+    </div>
+  </div>
+
+  <!-- Horn sound -->
+  <audio id="horn" src="../../assets/sounds/car_horn.mp3"></audio>
+
+  <!-- Game logic -->
+  <script src="drivingdirections.js"></script>
+</body>
+</html>

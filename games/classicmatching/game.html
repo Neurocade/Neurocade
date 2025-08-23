@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NEUROCADE - Classic Matching Game</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+  <section class="arcade-screen" id="gameScreen">
+    <h1>Classic Matching Game</h1>
+
+    <div class="instructions">
+      There are 10 objects among the 20 cards below. Each object appears twice. Click a card to flip it over and match all pairs to win!
+    </div>
+
+    <div class="button-row">
+      <button id="resetBtn" type="button">Reset Game</button>
+      <button id="backBtn" type="button">Back to Home</button>
+    </div>
+
+    <div class="feedback" id="feedback"></div>
+
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <!-- Winner overlay -->
+  <div class="winner-overlay" id="winnerOverlay">
+    <div id="winner">Winner Winner Chicken Dinner!</div>
+    <img id="chicken" src="../../assets/images/chicken.gif" alt="Dancing Chicken">
+  </div>
+
+  <!-- Sounds -->
+  <audio id="ding" src="../../assets/sounds/ding.mp3"></audio>
+  <audio id="buzzer" src="../../assets/sounds/buzzer.mp3"></audio>
+  <audio id="shuffleSound" src="../../assets/sounds/shuffle.mp3"></audio>
+
+  <script src="cmatching.js"></script>
+</body>
+</html>

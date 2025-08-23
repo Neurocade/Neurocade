@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Paced Visual N-Back</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="pvnnbstyle.css">
+</head>
+<body>
+  <section class="arcade-screen nback-app">
+
+    <!-- Intro Screen -->
+    <div id="introScreen" class="screen active">
+      <h1>Paced Visual N-Back</h1>
+      <div class="instructions">
+        Memorize numbers presented. Select your level (1–9) and rate (seconds per number).<br>
+        Examples: <br>
+        1-back: 3 → 5 → ?<br>
+        2-back: 3 → 5 → 3 → ?<br>
+        3-back: 3 → 5 → 7 → ?<br>
+        4-back: 3 → 5 → 7 → 2 → ?<br>
+        ...up to 9-back.<br>
+        Enter your answer using the on-screen buttons or your keyboard by typing the appropriate digits (0-9) on your keyboard.
+      </div>
+
+      <div class="button-row">
+        <div class="control-row" id="levelRow"></div>
+      </div>
+      <div class="button-row">
+        <div class="control-row" id="rateRow"></div>
+      </div>
+
+      <div class="start-row">
+        <button id="startBtn" class="btn primary">Start</button>
+        <button id="backHomeBtn" class="btn">Back to Home</button>
+      </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="gameScreen" class="screen">
+      <div id="digitDisplay" class="number-display"></div>
+      <div class="answer-row" id="answerButtons"></div>
+      <div class="status" id="statusText"></div>
+    </div>
+
+    <!-- Results Screen -->
+    <div id="resultsScreen" class="screen">
+      <h2>Game Over</h2>
+      <div id="finalScore">Score: 0</div>
+      <div class="start-row">
+        <button id="playAgainBtn" class="btn primary">Play Again</button>
+        <button id="backHomeBtn2" class="btn">Back to Home</button>
+      </div>
+    </div>
+
+  </section>
+
+  <script src="../../shared.js"></script>
+  <script src="pvnnbjs.js"></script>
+</body>
+</html>

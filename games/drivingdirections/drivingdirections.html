@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Driving Directions Game</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="shared.js" defer></script>
+  <script src="drivingdirections.js" defer></script>
+</head>
+<body>
+  <!-- Title Screen -->
+  <div id="title-screen" class="centered-screen">
+    <h1>Driving Directions</h1>
+    <div class="car-animation">🚗💨 (car animation placeholder)</div>
+    <p class="instructions">
+      You will be given a set of directions. Read them carefully, paying close attention to mentioned landmarks and turns, because you will have to follow these directions from memory to reach your destination. You will be deducted points for each wrong turn you make! Drive carefully!
+    </p>
+    <div class="menu-buttons">
+      <button id="start-game">Start</button>
+      <button onclick="window.location.href='index.html'">Back to Home</button>
+    </div>
+  </div>
+
+  <!-- Game Screen -->
+  <div id="game-screen" class="hidden">
+    <h2 id="status-text"></h2>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <button class="back-button" onclick="window.location.href='index.html'">Back to Home</button>
+  </div>
+</body>
+</html>
