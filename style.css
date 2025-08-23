@@ -1,0 +1,313 @@
+:root {
+  --cyan: #00ffff;
+  --magenta: #ff00ff;
+  --card-size: 110px;
+  --gap: 12px;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: 'Press Start 2P', cursive;
+  background: radial-gradient(circle at center, #0a0a0a, #000);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  overflow: hidden;
+  animation: flicker 3s infinite;
+  padding: 20px;
+}
+
+.arcade-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  width: 90%;
+  max-width: 900px;
+  padding: 24px;
+  margin: 12px;
+  border-radius: 20px;
+  border: 4px solid #0f0;
+  box-shadow: 0 0 30px rgba(0, 255, 0, 0.5), inset 0 0 40px rgba(0,255,255,0.25);
+  background: #111;
+  perspective: 900px;
+}
+
+h1 {
+  font-size: 2.2rem;
+  color: var(--cyan);
+  text-shadow: 0 0 10px var(--magenta), 0 0 20px var(--magenta), 0 0 30px var(--cyan);
+  margin-bottom: 24px;
+  letter-spacing: 2px;
+  text-align: center;
+}
+
+.instructions {
+  font-size: 1rem;
+  max-width: 700px;
+  margin-bottom: 20px;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.button-row {
+  display: flex;
+  gap: 15px;
+  margin: 15px 0;
+}
+
+button {
+  padding: 14px 22px;
+  font-size: 1rem;
+  background: var(--magenta);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 0 0 8px var(--cyan), 0 0 16px var(--magenta);
+  font-family: 'Press Start 2P', cursive;
+  position: relative;
+  overflow: hidden;
+}
+
+button:hover {
+  animation: glow 1.5s infinite alternate;
+}
+
+@keyframes glow {
+  from { box-shadow: 0 0 8px var(--cyan), 0 0 16px var(--magenta); }
+  to   { box-shadow: 0 0 16px var(--cyan), 0 0 32px var(--magenta); }
+}
+
+button::after {
+  content: "";
+  position: absolute; inset: -100% 0 0 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255,255,255,0.07) 0px,
+    rgba(255,255,255,0.07) 2px,
+    transparent 2px,
+    transparent 4px
+  );
+  animation: scan 4s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes scan { from { transform: translateY(0); } to { transform: translateY(50%); } }
+
+.feedback {
+  font-size: 1.4rem;
+  font-weight: bold;
+  margin: 15px 0;
+  min-height: 1.5em;
+  text-align: center;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(5, var(--card-size));
+  grid-auto-rows: var(--card-size);
+  gap: var(--gap);
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.card {
+  width: var(--card-size);
+  height: var(--card-size);
+  perspective: 800px;
+  cursor: pointer;
+}
+
+.card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.6s;
+}
+
+.card.flipped .card-inner { transform: rotateY(180deg); }
+
+.card-front, .card-back {
+  position: absolute; inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--cyan);
+  border-radius: 8px;
+  backface-visibility: hidden;
+  text-shadow: 0 0 6px var(--cyan);
+}
+
+.card-front { background: #111; color: #0af; }
+.card-back { background: #222; color: #fff; transform: rotateY(180deg); font-size: 2rem; }
+
+.card.matched {
+  pointer-events: none;
+  filter: saturate(1.2) drop-shadow(0 0 8px var(--cyan));
+}
+
+.card.shake .card-inner { animation: shake 0.4s; }
+@keyframes shake {
+  0%,100% { transform: rotateY(0) translateX(0); }
+  25% { transform: rotateY(0) translateX(-6px); }
+  50% { transform: rotateY(0) translateX(6px); }
+  75% { transform: rotateY(0) translateX(-6px); }
+}
+
+/* Winner overlay */
+.winner-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  z-index: 10;
+}
+
+.winner-overlay.show {
+  display: flex;
+}
+
+#winner {
+  font-size: 2.2rem;
+  color: yellow;
+  text-align: center;
+}
+
+#chicken {
+  width: 150px;
+}
+
+/* Driving Directions Specific Styles */
+.centered-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+}
+
+.hidden {
+  display: none;
+}
+
+.car-animation {
+  font-size: 2rem;
+  margin: 1rem 0;
+  animation: drive 2s infinite linear;
+}
+
+@keyframes drive {
+  0% { transform: translateX(-20px); }
+  50% { transform: translateX(20px); }
+  100% { transform: translateX(-20px); }
+}
+
+#gameCanvas {
+  border: 2px solid black;
+  margin: 1rem 0;
+}
+
+#status-text {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.menu-buttons button, .back-button {
+  margin: 0.5rem;
+  padding: 0.7rem 1.2rem;
+  font-size: 1rem;
+}
+
+/* =========================== */
+/* Driving Directions Win Overlay */
+/* =========================== */
+
+#win-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  gap: 20px;
+  z-index: 9999;
+  display: none; /* hidden until win */
+}
+
+#win-overlay .overlay-content {
+  text-align: center;
+}
+
+#win-overlay.show,
+#win-overlay:not(.hidden) {
+  display: flex;
+}
+
+#win-overlay h2 {
+  font-size: 2.2rem;
+  color: #ffeb3b;
+  text-shadow: 0 0 10px orange, 0 0 20px red;
+  animation: pulse 1.5s infinite;
+}
+
+#win-overlay button {
+  padding: 14px 22px;
+  font-size: 1rem;
+  background: var(--magenta);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 0 0 8px var(--cyan), 0 0 16px var(--magenta);
+  font-family: 'Press Start 2P', cursive;
+  margin: 5px;
+  position: relative;
+  overflow: hidden;
+}
+
+#win-overlay button:hover {
+  animation: glow 1.5s infinite alternate;
+}
+
+#win-overlay button::after {
+  content: "";
+  position: absolute; inset: -100% 0 0 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255,255,255,0.07) 0px,
+    rgba(255,255,255,0.07) 2px,
+    transparent 2px,
+    transparent 4px
+  );
+  animation: scan 4s linear infinite;
+  pointer-events: none;
+}
+
+/* Reuse existing keyframes from Matching Game */
+@keyframes glow {
+  from { box-shadow: 0 0 8px var(--cyan), 0 0 16px var(--magenta); }
+  to   { box-shadow: 0 0 16px var(--cyan), 0 0 32px var(--magenta); }
+}
+
+@keyframes scan { from { transform: translateY(0); } to { transform: translateY(50%); } }
+@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
