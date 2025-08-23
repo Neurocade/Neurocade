@@ -14,14 +14,45 @@
     <div id="introScreen" class="screen active">
       <h1>Paced Visual N-Back</h1>
       <div class="instructions">
-        Memorize numbers presented. Select your level (1–9) and rate (seconds per number).<br>
-        Examples: <br>
-        1-back: 3 → 5 → ?<br>
-        2-back: 3 → 5 → 3 → ?<br>
-        3-back: 3 → 5 → 7 → ?<br>
-        4-back: 3 → 5 → 7 → 2 → ?<br>
-        ...up to 9-back.<br>
-        Enter your answer using the on-screen buttons or your keyboard by typing the appropriate digits (0-9) on your keyboard.
+        <h2>How to Play: Additive N-Back Task</h2>
+        <p>
+          In this game, you will see a sequence of numbers, one at a time.<br>
+          Your job is to <strong>add the current number to the number that appeared n steps earlier</strong> (where n is the n-back level you chose).
+        </p>
+        <p>
+          For each turn, enter the sum of the current number and the number from n steps ago.<br>
+          <strong>You can select your answer by clicking the number on the screen with your mouse, or by pressing the corresponding number key on your keyboard.</strong>
+        </p>
+        <hr>
+        <h3>Examples</h3>
+        <ul>
+          <li>
+            <strong>1-back:</strong><br>
+            Sequence: 3 → 5 → <strong>?</strong><br>
+            If the next number in the above sequence is 2, add it to the number 1 step back (which was 5):<br>
+            <em>2 + 5 = 7</em>
+          </li>
+          <li>
+            <strong>2-back:</strong><br>
+            Sequence: 3 → 5 → 7 → <strong>?</strong><br>
+            If the next number in the above sequence is 4, add it to the number 2 steps back (which was 5):<br>
+            <em>4 + 5 = 9</em>
+          </li>
+          <li>
+            <strong>3-back:</strong><br>
+            Sequence: 3 → 5 → 7 → 2 → <strong>?</strong><br>
+            If the next number in the above sequence is 6, add it to the number 3 steps back (which was 5):<br>
+            <em>6 + 5 = 11</em>
+          </li>
+          <li>
+            <strong>4-back:</strong><br>
+            Sequence: 3 → 5 → 7 → 2 → 8 → <strong>?</strong><br>
+            If the next number in the above sequence is 4, add it to the number 4 steps back (which was 5):<br>
+            <em>4 + 5 = 9</em>
+          </li>
+        </ul>
+        <hr>
+        <p>Ready? Select your n-back level, rate of number presentation, and start playing!</p>
       </div>
 
       <div class="button-row">
