@@ -1,3 +1,108 @@
+/* Layout for score/high score windows and main game */
+.game-main-row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: center;
+  width: 100%;
+  gap: 3vw;
+}
+
+.score-windows-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 2.2em;
+  margin-top: 2.5em;
+  min-width: 90px;
+}
+
+.score-label {
+  color: #0ff;
+  font-size: 1.1em;
+  font-family: 'Press Start 2P', cursive;
+  text-align: center;
+  margin-bottom: 0.2em;
+  letter-spacing: 1px;
+  text-shadow: 0 0 8px #0ff, 0 0 4px #fff;
+}
+
+.score-window {
+  width: 80px;
+  height: 48px;
+  background: linear-gradient(135deg, #111 80%, #0f0 100%);
+  border: 3px solid #0ff;
+  border-radius: 12px;
+  box-shadow: 0 0 12px #0ff, 0 0 6px #0f0, 0 0 2px #fff;
+  color: #fff;
+  font-size: 1.3em;
+  font-family: 'Press Start 2P', cursive;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.7em;
+  margin-top: 0.1em;
+  user-select: none;
+}
+
+@media (max-width: 900px) {
+  .game-main-row { gap: 1vw; }
+  .score-window { width: 48px; height: 32px; font-size: 0.9em; }
+  .score-windows-col { min-width: 50px; gap: 1.2em; }
+}
+/* Feedback image style for fitting inside feedback windows */
+.feedback-img {
+  width: 80%;
+  height: 80%;
+  object-fit: contain;
+  display: block;
+  margin: auto;
+  filter: drop-shadow(0 0 8px #0ff) drop-shadow(0 0 4px #fff);
+}
+/* Feedback windows for left/right of number display, only on game screen */
+.feedback-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin: 0 0 12px 0;
+  gap: 12vw;
+}
+
+.feedback-window {
+  width: 70px;
+  height: 70px;
+  min-width: 50px;
+  min-height: 50px;
+  max-width: 90px;
+  max-height: 90px;
+  margin: 0 6vw;
+  background: linear-gradient(135deg, #111 80%, #0f0 100%);
+  border: 3px solid #0ff;
+  border-radius: 16px;
+  box-shadow: 0 0 16px #0ff, 0 0 8px #0f0, 0 0 4px #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+@media (max-width: 900px) {
+  .feedback-window {
+    width: 40px;
+    height: 40px;
+    min-width: 28px;
+    min-height: 28px;
+    margin: 0 1vw;
+  }
+  .feedback-row {
+    gap: 4vw;
+  }
+}
 :root {
   --cyan: #00ffff;
   --magenta: #ff00ff;
@@ -10,10 +115,6 @@ html, body {
   font-family: 'Press Start 2P', cursive;
   background: radial-gradient(circle at center, #0a0a0a, #000);
   color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
   padding: 0;
 }
 
@@ -23,17 +124,22 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 99vw;
-  max-width: 1400px;    /* Significantly wider */
-  min-width: 340px;
-  padding: 16px 48px;  /* More horizontal, less vertical padding */
-  margin: 8px auto;
+  width: 80vw;
+  max-width: 1600px;
+  min-width: 320px;
+  padding: 16px 48px;
+  margin: auto;
   border-radius: 20px;
   border: 4px solid #0f0;
   box-shadow: 0 0 30px rgba(0,255,0,0.5), inset 0 0 40px rgba(0,255,255,0.25);
   background: #111;
   perspective: 900px;
   font-size: 0.85rem;
+  height: 90vh;
+  max-height: 90vh;
+  overflow-y: auto;
+  margin-top: 32px;
+  margin-bottom: 32px;
 }
 
 @media (max-width: 1200px) {
@@ -52,6 +158,14 @@ html, body {
   }
 }
 
+@media (max-width: 375px) {
+  .arcade-screen {
+    max-width: 98vw;
+    padding: 2px 1vw;
+    font-size: 0.65rem;
+  }
+}
+
 /* Make instruction text fill the horizontal space and use left-aligned text for easy reading */
 .instructions,
 #introScreen .instructions,
@@ -60,12 +174,39 @@ html, body {
 #introScreen p,
 #introScreen h2,
 #introScreen h3 {
-  font-size: 0.85rem !important;
+  font-size: 0.73rem !important;
   line-height: 1.5;
-  max-width: 1000px;
+  max-width: 1300px;
+  width: 98vw;
   text-align: left;
   margin-left: auto;
   margin-right: auto;
+  word-break: break-word;
+}
+
+@media (max-width: 1200px) {
+  .instructions,
+  #introScreen .instructions,
+  #introScreen ul,
+  #introScreen li,
+  #introScreen p,
+  #introScreen h2,
+  #introScreen h3 {
+    max-width: 98vw;
+    font-size: 0.70rem !important;
+  }
+}
+@media (max-width: 800px) {
+  .instructions,
+  #introScreen .instructions,
+  #introScreen ul,
+  #introScreen li,
+  #introScreen p,
+  #introScreen h2,
+  #introScreen h3 {
+    max-width: 100vw;
+    font-size: 0.67rem !important;
+  }
 }
 
 /* Make main instructions block less vertically spaced */
@@ -108,6 +249,16 @@ h1 {
   opacity: 0.4;
 }
 
+/*styling for the in game instructions*/
+.status {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 64px 0 8px;
+  padding-top: 32px;
+}
+
+/* Button layout rows */
 .button-row, .control-row, .start-row {
   display: flex;
   justify-content: center;
@@ -115,10 +266,19 @@ h1 {
   margin: 8px 0;
 }
 
+/* for start and back to home buttons*/
+.game-btn-row {
+  margin-top: 32px; /* or any value you like */
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
 .control-row {
   flex-wrap: wrap;
 }
 
+/* General button style */
 button {
   padding: 14px 22px;
   font-size: 1rem;
@@ -134,9 +294,70 @@ button {
 }
 
 button:hover { animation: glow 1.5s infinite alternate; }
-button::after { content:""; position:absolute; inset:-100% 0 0 0; background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.07) 0, rgba(255,255,255,0.07) 2px, transparent 2px, transparent 4px); animation: scan 4s linear infinite; pointer-events:none; }
+button::after { content:""; position:absolute; inset:-100% 0 0 0; background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.07) 0, rgba(255,255,255,0.07) 2px, transparent 2px, transparent 4px); pointer-events:none; }
+
 @keyframes glow { from{box-shadow:0 0 8px var(--cyan),0 0 16px var(--magenta);} to{box-shadow:0 0 16px var(--cyan),0 0 32px var(--magenta);} }
 @keyframes scan { from{transform:translateY(0);} to{transform:translateY(50%);} }
+
+/* 33% smaller for start screen level/rate buttons */
+.level-btn, .rate-btn {
+  padding: 5px 9px;
+  font-size: 0.6rem;
+  border-radius: 6px;
+  background: #111;
+  color: var(--cyan);
+  border: 2px solid var(--cyan);
+  cursor: pointer;
+  box-shadow: 0 0 8px var(--cyan),0 0 16px var(--magenta);
+  margin: 2px 4px;
+}
+.level-btn.selected, .rate-btn.selected {
+  background: var(--magenta);
+  color: #fff;
+  box-shadow: 0 0 16px var(--cyan),0 0 32px var(--magenta);
+}
+
+/* Hide level/rate buttons when not on start screen, if you use a class like .hide-on-game */
+.hide-on-game {
+  display: none !important;
+}
+
+/* Game screen only: num-btns, reset/back buttons, etc. */
+.num-btn {
+  width: 60px;
+  height: 60px;
+  border-radius: 999px;
+  border: 2px solid var(--cyan);
+  background: #111;
+  color: var(--cyan);
+  font-weight: 700;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 8px var(--cyan),0 0 16px var(--magenta);
+  transition: transform 0.1s;
+  margin: 18px;
+}
+.num-btn:hover { box-shadow:0 0 16px var(--cyan),0 0 32px var(--magenta); transform:scale(1.05); }
+.num-btn:active { transform:scale(0.98); }
+
+.answer-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-top: 1rem;
+  margin-bottom: 32px; /* or a value you like */
+}
+
+/* You may want to use a utility class to hide .answer-row and .num-btns on the start screen */
+.hide-on-start {
+  display: none !important;
+}
+
+/* For game screen, you may have extra buttons like reset/home; style here, but make sure they're not on the start screen */
 
 .screen {
   display: none;
@@ -171,53 +392,38 @@ button::after { content:""; position:absolute; inset:-100% 0 0 0; background: re
 .number-display.good { color:#0f0; text-shadow:0 0 12px #0f0,0 0 24px #0f0; }
 .number-display.bad  { color:#f00; text-shadow:0 0 12px #f00,0 0 24px #f00; }
 
-.num-btn {
-  width: 60px;
-  height: 60px;
-  border-radius: 999px;
-  border: 2px solid var(--cyan);
-  background: #111;
-  color: var(--cyan);
-  font-weight: 700;
-  font-size: 1.2rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 0 8px var(--cyan),0 0 16px var(--magenta);
-  transition: transform 0.1s;
-}
-.num-btn:hover { box-shadow:0 0 16px var(--cyan),0 0 32px var(--magenta); transform:scale(1.05); }
-.num-btn:active { transform:scale(0.98); }
-
-.level-btn, .rate-btn {
-  padding: 8px 14px;
-  font-size: 0.9rem;
-  border-radius: 8px;
-  background: #111;
-  color: var(--cyan);
-  border: 2px solid var(--cyan);
-  cursor: pointer;
-  box-shadow: 0 0 8px var(--cyan),0 0 16px var(--magenta);
-}
-.level-btn.selected, .rate-btn.selected {
-  background: var(--magenta);
-  color: #fff;
-  box-shadow: 0 0 16px var(--cyan),0 0 32px var(--magenta);
-}
-
-.answer-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  justify-content: center;
-  margin-top: 1rem;
-}
-
 #statusText {
   margin-top: 15px;
   font-size: 1.2rem;
   text-align: center;
   min-height: 1.5em;
   color: #fff;
+}
+
+/* Add to your CSS file */
+#digitDisplay.good {
+  color: #00ff00;
+  text-shadow: 0 0 16px #00ff00, 0 0 32px #00ff00;
+  animation: correctPulse 0.5s;
+}
+
+#digitDisplay.bad {
+  color: #ff3333;
+  text-shadow: 0 0 16px #ff3333, 0 0 32px #ff3333;
+  animation: incorrectShake 0.5s;
+}
+
+@keyframes correctPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+@keyframes incorrectShake {
+  0% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-8px); }
+  80% { transform: translateX(8px); }
+  100% { transform: translateX(0); }
 }
