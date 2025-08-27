@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="pvnnbstyle.css">
 </head>
 <body>
+
   <section class="arcade-screen nback-app">
 
     <!-- Intro Screen -->
@@ -55,24 +56,48 @@
         <p>Ready? Select your n-back level, rate of number presentation, and start playing!</p>
       </div>
 
-      <div class="button-row">
+      <div class="level-select-row button-row">
+        <span style="margin-right: 8px;">Select Level:</span>
         <div class="control-row" id="levelRow"></div>
       </div>
-      <div class="button-row">
+      <div class="rate-select-row button-row">
+        <span style="margin-right: 8px;">Select Speed:</span>
         <div class="control-row" id="rateRow"></div>
       </div>
 
       <div class="start-row">
         <button id="startBtn" class="btn primary">Start</button>
-        <button id="backHomeBtn" class="btn">Back to Home</button>
+        <button id="backHomeBtnIntro" class="btn">Back to Home</button>
       </div>
     </div>
 
+
     <!-- Game Screen -->
     <div id="gameScreen" class="screen">
-      <div id="digitDisplay" class="number-display"></div>
-      <div class="answer-row" id="answerButtons"></div>
-      <div class="status" id="statusText"></div>
+      <div class="game-main-row">
+        <div class="score-windows-col">
+          <div class="score-label">Score</div>
+          <div class="score-window" id="scoreWindow">0</div>
+          <div class="score-label">High Score</div>
+          <div class="score-window" id="highScoreWindow">0</div>
+        </div>
+        <div class="game-main-col">
+          <div class="feedback-row">
+            <div class="feedback-window" id="feedbackLeft"></div>
+            <div id="digitDisplay" class="number-display"></div>
+            <div class="feedback-window" id="feedbackRight"></div>
+          </div>
+          <div class="answer-row" id="answerButtonsRow1"></div>
+          <div class="answer-row" id="answerButtonsRow2"></div>
+          <div class="game-btn-row">
+            <button id="resetBtn" class="btn secondary">Reset</button>
+            <button id="disablePromptsBtn" class="btn">Disable Prompts</button>
+            <button id="muteBtn" class="btn">Mute</button>
+            <button id="backHomeBtnGame" class="btn">Back to Home</button>
+          </div>
+          <div class="status" id="statusText"></div>
+        </div>
+      </div>
     </div>
 
     <!-- Results Screen -->
@@ -81,13 +106,15 @@
       <div id="finalScore">Score: 0</div>
       <div class="start-row">
         <button id="playAgainBtn" class="btn primary">Play Again</button>
-        <button id="backHomeBtn2" class="btn">Back to Home</button>
+        <button id="backHomeBtnResult" class="btn">Back to Home</button>
       </div>
     </div>
 
-  </section>
 
-  <script src="../../shared.js"></script>
+    </section>
+    <div class="feedback-window" id="feedbackRight"></div>
+  </div>
+
   <script src="pvnnbjs.js"></script>
 </body>
 </html>
