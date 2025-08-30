@@ -1,3 +1,7 @@
+/* Shift the level-select row right by about 1 inch */
+.level-select-row.button-row {
+  margin-left: 226px;
+}
 /* Layout for score/high score windows and main game */
 .game-main-row {
   display: flex;
@@ -426,4 +430,10 @@ button::after { content:""; position:absolute; inset:-100% 0 0 0; background: re
   60% { transform: translateX(-8px); }
   80% { transform: translateX(8px); }
   100% { transform: translateX(0); }
+}
+
+/* Force left alignment for rate select row on the intro screen */
+.rate-select-row.button-row {
+  justify-content: flex-start !important;
+  width: 100%;
 }
