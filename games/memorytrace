@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Memory Trace</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- START SCREEN -->
+  <section id="start-screen" class="screen active">
+    <div class="start-card">
+      <h1 class="title">Memory Trace</h1>
+      <h2 class="subtitle">A Working Memory Game.</h2>
+
+      <div class="instructions">
+        <p><strong>Instructions:</strong> you will see a series of letters and numbers. Pay close attention and remember the letters and numbers that appear, including their correct order. On the following screen you will be asked to complete a task. Follow the instructions. You will then be asked to recall the previously displayed letters and numbers, in the correct order.</p>
+      </div>
+
+      <div class="start-actions">
+        <button id="btn-start" class="btn primary">Start</button>
+        <button id="btn-home" class="btn ghost">Back to Home</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- GAME SCREEN -->
+  <section id="game-screen" class="screen">
+    <div class="game-shell">
+      <!-- Right sidebar: score -->
+      <aside class="sidebar">
+        <div class="scorebox">
+          <div class="label">score</div>
+          <div id="score" class="value">0</div>
+        </div>
+        <div class="scorebox">
+          <div class="label">high score</div>
+          <div id="high-score" class="value">0</div>
+        </div>
+        <div id="streak" class="streak">Streak: 0</div>
+        <div id="phase-indicator" class="phase-indicator">Phase 1</div>
+      </aside>
+
+      <!-- Main playfield -->
+      <main class="playfield neon-border">
+        <!-- Top instruction row (for color selection prompt) -->
+        <div id="task-instructions" class="task-instructions"></div>
+
+        <!-- Center stage for messages and sequences -->
+        <div class="stage">
+          <div id="phase-banner" class="phase-banner"></div>
+          <div id="ready-go" class="ready-go"></div>
+          <div id="sequence" class="sequence"></div>
+
+          <!-- Color squares container -->
+          <div id="squares" class="squares"></div>
+
+          <!-- Answer input overlay -->
+          <div id="answer-modal" class="answer-modal hidden" role="dialog" aria-modal="true">
+            <div class="answer-card">
+              <div id="answer-prompt" class="answer-prompt">
+                Enter the characters you saw:
+              </div>
+              <input id="answer-input" class="answer-input" type="text" maxlength="8" autocomplete="off" />
+              <div class="answer-actions">
+                <button id="submit-answer" class="btn primary">Submit</button>
+              </div>
+              <div id="feedback" class="feedback"></div>
+            </div>
+          </div>
+
+          <!-- Phase 3 extra instruction card -->
+          <div id="phase3-card" class="phase3-card hidden">
+            <h3>Instructions</h3>
+            <p>
+              Pay close attention to the letters and numbers shown. Follow the instructions on the following page. When it asks you to recall the letters and numbers, enter them <strong>backwards</strong>. That is, enter them in the reverse order than what was shown. For example if you see <strong>Q2R7</strong> you would enter <strong>7R2Q</strong>.
+            </p>
+            <button id="phase3-continue" class="btn primary">Continue</button>
+          </div>
+        </div>
+      </main>
+    </div>
+  </section>
+
+  <script src="game.js"></script>
+</body>
+</html>
