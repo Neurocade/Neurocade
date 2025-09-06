@@ -1,6 +1,8 @@
 - 🔭 I’m currently working on ...figuring out how to use html, js, css, github, git bash
 - 🌱 I’m currently learning ...basically everything. I have no idea what I am doing.
 
+- **ATTRIBUTIONS:** all embedded content (i.e. PNGs and MP3s) are from https://pixabay.com****
+
 [https://github.com/Neurocade/Neurocade.git](https://neurocade.github.io/Neurocade/)
 
 <!--
