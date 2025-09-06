@@ -4,19 +4,19 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Memory Trace</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="memorytrace.css" />
 </head>
 <body>
   <!-- START SCREEN -->
   <section id="start-screen" class="screen active">
     <div class="start-card">
-      <h1 class="title">Memory Trace</h1>
-      <h2 class="subtitle">A Working Memory Game.</h2>
-
-      <div class="instructions">
+      <header>
+        <h1 class="title">Memory Trace</h1>
+        <h2 class="subtitle">A Working Memory Game.</h2>
+      </header>
+      <div class="instructions" id="instructions">
         <p><strong>Instructions:</strong> you will see a series of letters and numbers. Pay close attention and remember the letters and numbers that appear, including their correct order. On the following screen you will be asked to complete a task. Follow the instructions. You will then be asked to recall the previously displayed letters and numbers, in the correct order.</p>
       </div>
-
       <div class="start-actions">
         <button id="btn-start" class="btn primary">Start</button>
         <button id="btn-home" class="btn ghost">Back to Home</button>
@@ -25,38 +25,17 @@
   </section>
 
   <!-- GAME SCREEN -->
-  <section id="game-screen" class="screen">
-    <div class="game-shell">
-      <!-- Right sidebar: score -->
-      <aside class="sidebar">
-        <div class="scorebox">
-          <div class="label">score</div>
-          <div id="score" class="value">0</div>
-        </div>
-        <div class="scorebox">
-          <div class="label">high score</div>
-          <div id="high-score" class="value">0</div>
-        </div>
-        <div id="streak" class="streak">Streak: 0</div>
-        <div id="phase-indicator" class="phase-indicator">Phase 1</div>
-      </aside>
-
-      <!-- Main playfield -->
-      <main class="playfield neon-border">
-        <!-- Top instruction row (for color selection prompt) -->
+  <section id="game-screen" class="screen" aria-label="Game Screen">
+  <div class="game-shell">
+      <main class="playfield neon-border" tabindex="-1">
         <div id="task-instructions" class="task-instructions"></div>
-
-        <!-- Center stage for messages and sequences -->
         <div class="stage">
           <div id="phase-banner" class="phase-banner"></div>
           <div id="ready-go" class="ready-go"></div>
           <div id="sequence" class="sequence"></div>
-
-          <!-- Color squares container -->
           <div id="squares" class="squares"></div>
-
           <!-- Answer input overlay -->
-          <div id="answer-modal" class="answer-modal hidden" role="dialog" aria-modal="true">
+          <div id="answer-modal" class="answer-modal hidden" role="dialog" aria-modal="true" aria-labelledby="answer-prompt" aria-describedby="feedback" aria-hidden="true">
             <div class="answer-card">
               <div id="answer-prompt" class="answer-prompt">
                 Enter the characters you saw:
@@ -68,7 +47,6 @@
               <div id="feedback" class="feedback"></div>
             </div>
           </div>
-
           <!-- Phase 3 extra instruction card -->
           <div id="phase3-card" class="phase3-card hidden">
             <h3>Instructions</h3>
@@ -79,9 +57,24 @@
           </div>
         </div>
       </main>
+      <aside class="sidebar" aria-label="Score Sidebar">
+        <div class="scorebox">
+          <div class="label">score</div>
+          <div id="score" class="value">0</div>
+        </div>
+        <div class="scorebox">
+          <div class="label">high score</div>
+          <div id="high-score" class="value">0</div>
+        </div>
+        <div id="streak" class="streak">Streak: 0</div>
+        <div id="phase-indicator" class="phase-indicator">Phase 1</div>
+      </aside>
+      <div class="game-bottom-actions" style="width:30%;display:flex;justify-content:center;gap:16px;margin-top:32px;">
+  <button id="btn-back-to-start" class="btn primary">Back to Start</button>
+  <button id="btn-back-to-home" class="btn primary">Back to Home</button>
+      </div>
     </div>
   </section>
-
-  <script src="game.js"></script>
+  <script src="memorytrace.js"></script>
 </body>
 </html>
