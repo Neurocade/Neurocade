@@ -1,10 +1,26 @@
+.squares {
+  margin-top: -32px; /* Shift up by about 0.5 inch (32px) */
+}
+.game-bottom-actions {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: auto;
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px 0;
+  background: transparent;
+  z-index: 10;
+}
 :root{
   --bg:#0b0d11;
   --card:#12151c;
   --text:#e9f1ff;
   --muted:#9db0d1;
-  --neon:#39ff14;           /* neon green border */
-  --accent:#7df9ff;         /* cyber blue accent */
+  --neon:#39ff14;
+  --accent:#7df9ff;
   --red:#ff4d4d;
   --yellow:#ffd166;
   --green:#2eea8a;
@@ -20,6 +36,12 @@ body{
   font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
   background: radial-gradient(1200px 800px at 50% 10%, #111723 0%, #0b0d11 60%, #06070b 100%);
   color:var(--text);
+}
+
+/* Focus styles for accessibility */
+.btn:focus, .square:focus, .answer-input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /* Screens */
@@ -70,6 +92,7 @@ body{
   border-radius:10px;
   font-weight:700;
   font-size:16px;
+  transition: background 0.2s, color 0.2s;
 }
 .btn.primary{
   background:linear-gradient(180deg, #7df9ff, #39c6ff);
@@ -181,14 +204,24 @@ body{
   font-size: clamp(22px, 4vw, 40px);
   font-weight:900;
   height: 48px;
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: auto;
+  text-align: center;
 }
 
 .sequence{
   font-size: clamp(44px, 7vw, 80px);
   font-weight:900;
   letter-spacing: 10px;
-  text-align:center;
-  user-select:none;
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: auto;
+  text-align: center;
 }
 
 /* Squares */
@@ -222,6 +255,7 @@ body{
   display:flex;
   align-items:center;
   justify-content:center;
+  z-index: 100;
 }
 .answer-card{
   width: min(520px, 92%);
@@ -252,7 +286,6 @@ body{
 }
 .feedback{ margin-top:10px; min-height:20px; font-weight:700; }
 
-/* Phase 3 info card */
 .phase3-card{
   position:absolute;
   inset:auto 18px 18px 18px;
@@ -274,12 +307,30 @@ body{
   0%,100%{ opacity:0; }
   50%{ opacity:1; }
 }
-.fade-in-out{
-  animation: fade 1.5s ease-in-out 1 forwards;
+/* Swap sidebar and playfield positions and sizes */
+.game-shell {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
 }
-@keyframes fade{
-  0%{ opacity:0; }
-  20%{ opacity:1; }
-  80%{ opacity:1; }
-  100%{ opacity:0; }
+.playfield {
+  width: 100%;
+  min-width: 0;
+  background: var(--main-bg);
+  padding: 32px 24px;
+  border-radius: 12px 0 0 12px;
+  box-shadow: 0 0 8px rgba(0,255,0,0.12);
+  border: 4px solid var(--accent);
+}
+.sidebar {
+  width: 33.3333%;
+  background: var(--sidebar-bg);
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border-radius: 0 12px 12px 0;
+  box-shadow: 0 0 8px rgba(0,0,0,0.08);
 }
