@@ -6,11 +6,27 @@
   <title>NEUROCADE - Home</title>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <style>
+    .button-row {
+      gap: 8px;
+    }
+    .game-btn {
+      padding: 6px 12px;
+      font-size: 0.7rem;
+      border-radius: 8px;
+      min-width: 90px;
+      min-height: 28px;
+      margin: 2px;
+    }
+  </style>
 </head>
-<body>
-  <section class="arcade-screen" id="homeScreen">
-    <!-- Title -->
-    <h1>NEUROCADE</h1>
+  <body>
+  <div class="starfield-bg"></div>
+  <section class="arcade-screen" id="homeScreen" style="position:relative;overflow:hidden;">
+    <div class="arcade-scanlines"></div>
+  <!-- Title -->
+  <h1>NEUROCADE</h1>
+  <div class="press-start-prompt">INSERT COIN</div>
 
     <!-- Instructions / Subtitle -->
     <div class="instructions">
@@ -19,16 +35,39 @@
 
     <!-- Game Buttons -->
     <div class="button-row">
-      <button onclick="location.href='games/classicmatching/game.html'">Classic Matching Game</button>
-      <button onclick="alert('Other games coming soon!')">Coming Soon</button>
-      <button onclick="window.location.href='games/drivingdirections/drivingdirectionsgame.html'">Driving Directions Game</button>
-      <button onclick="window.location.href='games/pacedvisualnumericalnback/pvnnbgame.html'">Paced Visual N-Back</button>
+  <button class="game-btn" data-href="games/classicmatching/game.html">Classic Matching Game</button>
+  <button class="game-btn" data-href="games/duelnback/duelnback.html">Dual N-Back</button>
+  <button class="game-btn" data-href="alert">Coming Soon</button>
+  <button class="game-btn" data-href="games/drivingdirections/drivingdirectionsgame.html">Driving Directions Game</button>
+  <button class="game-btn" data-href="games/pacedvisualnumericalnback/pvnnbgame.html">Paced Visual N-Back</button>
+  <button class="game-btn" data-href="games/memorytrace/memorytrace.html">Memory Trace</button>
     </div>
 
     <!-- Optional Footer / Status -->
     <div class="feedback">
       Have fun and challenge yourself!
     </div>
+    <div style="width:100%;display:flex;justify-content:center;margin-top:40px;">
+  </div>
+  <img src="assets/images/8bitarcade.png" alt="8-bit Arcade" id="arcade-footer-img" style="position:absolute;left:50%;transform:translateX(-50%);bottom:18px;max-width:211px;width:53%;height:auto;filter:drop-shadow(0 0 12px #0f0);z-index:2;" />
+    </div>
   </section>
+  <script src="starfield.js"></script>
+  <script>
+    const gameStartSound = new Audio('assets/sounds/gamestart.mp3');
+    document.querySelectorAll('.game-btn').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        gameStartSound.currentTime = 0;
+        gameStartSound.play();
+        const href = btn.getAttribute('data-href');
+        if (href === 'alert') {
+          setTimeout(() => alert('Other games coming soon!'), 180);
+        } else {
+          setTimeout(() => { window.location.href = href; }, 180);
+        }
+      });
+    });
+  </script>
 </body>
 </html>
