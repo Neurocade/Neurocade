@@ -57,10 +57,4 @@ function animateStarfield() {
   });
 }
 
-if (
-  window.location.pathname.endsWith('index.html') ||
-  window.location.pathname === '/' ||
-  window.location.pathname === '/index.html'
-) {
-  window.addEventListener('DOMContentLoaded', animateStarfield);
-}
+window.addEventListener('DOMContentLoaded', animateStarfield);
