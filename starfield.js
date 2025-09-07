@@ -1,4 +1,5 @@
 // Simple animated starfield for home screen background
+console.log("starfield.js loaded!");
 const STAR_COUNT = 300;
 const STAR_SPEED = 0.12;
 const STAR_SIZE = 1.8;
