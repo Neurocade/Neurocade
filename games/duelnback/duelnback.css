@@ -1,0 +1,96 @@
+/* Duel N-Back Game Specific Styles */
+#duel-nback-app {
+  width: 100vw;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
+.screen {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+}
+.screen.active {
+  display: flex;
+}
+.instructions {
+  margin-bottom: 18px;
+  text-align: left;
+  font-size: 1rem;
+}
+.level-select-row, .speed-select-row, .start-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.level-btn, .speed-btn {
+  padding: 6px 14px;
+  font-size: 0.9rem;
+  border-radius: 6px;
+  background: #111;
+  color: #00f;
+  border: 2px solid #00f;
+  cursor: pointer;
+  margin: 2px 4px;
+  font-family: 'Press Start 2P', cursive;
+  box-shadow: 0 0 8px #ff00ff, 0 0 16px #ff00ff;
+  transition: background 0.2s, color 0.2s;
+}
+.level-btn.selected, .speed-btn.selected {
+  background: #00f;
+  color: #fff;
+}
+.grid-container {
+  margin: 24px 0 12px 0;
+  display: flex;
+  justify-content: center;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 96px);
+  grid-template-rows: repeat(3, 96px);
+  gap: 10px;
+}
+.grid-square {
+  width: 96px;
+  height: 96px;
+  border-radius: 12px;
+  background: #222;
+  border: 2px solid #00f;
+  box-shadow: 0 0 8px #00f;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.grid-square.active {
+  background: #00f;
+  box-shadow: 0 0 16px #00f, 0 0 32px #00f;
+}
+.audio-letter {
+  font-size: 2.2rem;
+  color: #00f;
+  margin-bottom: 18px;
+  text-align: center;
+  min-height: 2.5rem;
+  font-family: 'Press Start 2P', cursive;
+}
+.game-btn-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.status {
+  min-height: 1.5em;
+  font-size: 1.1rem;
+  color: #333;
+  text-align: center;
+}
+
+.status.magenta {
+  color: #ff00ff !important;
+}
