@@ -1,3 +1,99 @@
+@media (max-width: 600px) {
+  .arcade-screen {
+    width: 100vw;
+    max-width: 100vw;
+    min-height: 100vh;
+    padding: 6px 2px;
+    margin: 0;
+    border-radius: 8px;
+    box-shadow: none;
+  }
+  .screen {
+    width: 100vw;
+    min-height: 100vh;
+    padding: 0;
+    margin: 0;
+    border-radius: 0;
+    box-shadow: none;
+    display: block;
+  }
+  .game-shell {
+    flex-direction: column !important;
+    width: 100vw;
+    max-width: 100vw;
+    min-height: 100vh;
+    padding: 0 2vw;
+    margin: 0;
+    box-sizing: border-box;
+    display: flex;
+    align-items: stretch;
+    justify-content: flex-start;
+  }
+  main.playfield {
+    width: 100vw;
+    min-width: 0;
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+  }
+  .sidebar {
+    width: 100vw;
+    max-width: 100vw;
+    margin: 0 0 12px 0;
+    padding: 4px 0;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: center;
+    box-sizing: border-box;
+    font-size: 0.9rem;
+  }
+  .scorebox {
+    margin: 0 4px;
+    padding: 2px 4px;
+  }
+  .game-bottom-actions {
+    width: 100vw !important;
+    margin-top: 12px !important;
+    gap: 8px !important;
+    padding: 0 2vw;
+    box-sizing: border-box;
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .btn, button {
+    font-size: 0.9rem;
+    min-width: 60px;
+    min-height: 22px;
+    padding: 8px 6px;
+    border-radius: 7px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  h1, .title {
+    font-size: 1.1rem;
+    margin-bottom: 8px;
+  }
+  .subtitle {
+    font-size: 0.9rem;
+    margin-bottom: 6px;
+  }
+  .instructions, .task-instructions {
+    font-size: 0.8rem;
+    max-width: 98vw;
+    margin-bottom: 8px;
+    padding: 0 2px;
+  }
+  .feedback {
+    font-size: 0.9rem;
+    margin: 8px 0;
+  }
+  #arcade-footer-img {
+    max-width: 100px;
+    width: 50vw;
+    bottom: 4px;
+  }
+}
 /* Responsive adjustments for small screens */
 @media (max-width: 600px) {
   .arcade-screen {
