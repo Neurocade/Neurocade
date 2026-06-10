@@ -1,1 +1,1104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attention Training Program</title>
+<style>
+/* ========================================================
+   SENIOR FRIENDLY DESIGN
+   Large fonts, high contrast, low clutter
+======================================================== */
+body {
+    font-family: Arial, sans-serif;
+    background: #111;
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    padding-top: 30px;
+    margin: 0;
+}
 
+#app {
+    max-width: 850px;
+    width: 100%;
+    background: #1e1e1e;
+    padding: 30px;
+    border-radius: 12px;
+    text-align: center;
+    position: relative;
+    min-height: 500px;
+    box-sizing: border-box;
+}
+
+h1 { 
+    font-size: 34px; 
+    margin-top: 0;
+}
+
+h2 { 
+    font-size: 26px; 
+}
+
+button {
+    font-size: 22px;
+    padding: 14px 24px;
+    margin: 10px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    background: #444;
+    color: white;
+    transition: all 0.2s ease;
+}
+
+button:hover {
+    background: #555;
+    transform: translateY(-2px);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+#startBtn { 
+    background: #4caf50; 
+    color: black; 
+    font-weight: bold; 
+}
+
+#startBtn:hover {
+    background: #5cbf60;
+}
+
+.secondary-btn {
+    font-size: 18px;
+    padding: 10px 20px;
+    background: #555;
+    margin-top: 20px;
+}
+
+#matchBtn {
+    font-size: 30px;
+    background: #4caf50;
+    color: black;
+    cursor: pointer;
+    border: none;
+    border-radius: 10px;
+    padding: 20px 40px;
+    font-weight: bold;
+}
+
+#matchBtn:hover {
+    background: #5cbf60;
+}
+
+#matchBtn.pressed {
+    background: #2ecc71;
+    transform: scale(0.95);
+    transition: transform 0.1s ease, background 0.1s ease;
+}
+
+select {
+    font-size: 20px;
+    padding: 8px;
+    margin: 6px;
+    background: #333;
+    color: white;
+    border: 1px solid #555;
+    border-radius: 6px;
+}
+
+#fixation {
+    font-size: 120px;
+    margin: 30px 0;
+    color: #bbb;
+}
+
+#results {
+    display: none;
+    font-size: 22px;
+}
+
+#instructionsBox {
+    background: #222;
+    padding: 20px;
+    border-radius: 10px;
+    font-size: 22px;
+    margin-top: 20px;
+    text-align: left;
+    line-height: 1.6;
+}
+
+.settings-group {
+    border: 1px solid #444;
+    padding: 15px;
+    margin: 20px 0;
+    border-radius: 10px;
+    background: #252525;
+}
+
+.settings-group label {
+    display: block;
+    margin: 10px 0;
+}
+
+.stat-box { 
+    color: #FFD700; 
+    font-weight: bold; 
+}
+
+.stat-row { 
+    font-size: 20px; 
+    margin: 10px 0; 
+    color: #ddd; 
+}
+
+/* TIMER DISPLAY */
+#timerDisplay {
+    font-size: 24px;
+    color: #FFD700;
+    background: #333;
+    padding: 10px 20px;
+    border-radius: 0 0 10px 10px;
+    display: inline-block;
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 1px solid #444;
+    border-top: none;
+    transition: color 0.3s ease, background 0.3s ease;
+}
+
+#timerDisplay.final-minute {
+    color: #ff4444;
+    background: #441111;
+    border-color: #ff4444;
+    font-weight: bold;
+    animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* MODAL STYLING */
+#customModal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.85);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: #222;
+    padding: 30px;
+    border-radius: 12px;
+    max-width: 500px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+#modalMessage {
+    font-size: 22px;
+    white-space: pre-line;
+    line-height: 1.6;
+    margin-bottom: 20px;
+}
+
+#modalButtonsContainer {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* ========================================================
+   RESPONSIVE ADJUSTMENTS
+======================================================== */
+@media (max-width: 700px) {
+    body {
+        padding: 10px;
+    }
+    
+    #app {
+        padding: 16px;
+        border-radius: 8px;
+        min-height: auto;
+    }
+    
+    h1 {
+        font-size: 26px;
+    }
+    
+    h2 {
+        font-size: 22px;
+    }
+    
+    button {
+        width: 100%;
+        max-width: 100%;
+        font-size: 20px;
+        padding: 12px 16px;
+        box-sizing: border-box;
+    }
+    
+    #matchBtn {
+        font-size: 26px;
+        padding: 16px 32px;
+    }
+    
+    select {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    
+    #fixation {
+        font-size: 90px;
+    }
+    
+    #timerDisplay {
+        font-size: 18px;
+        padding: 6px 12px;
+    }
+    
+    .settings-group {
+        margin: 12px 0;
+        padding: 12px;
+    }
+    
+    #instructionsBox {
+        font-size: 18px;
+    }
+    
+    .stat-row {
+        font-size: 18px;
+    }
+
+    .modal-content {
+        padding: 20px;
+    }
+
+    #modalMessage {
+        font-size: 18px;
+    }
+}
+
+@media (max-width: 400px) {
+    #fixation {
+        font-size: 70px;
+    }
+    
+    h1 {
+        font-size: 22px;
+    }
+}
+</style>
+</head>
+<body>
+<div id="app">
+    <div id="timerDisplay" style="display:none;">Time Remaining: 10:00</div>
+    <h1>Attention Training</h1>
+    
+    <!-- ===================== HOME / MENU ===================== -->
+    <div id="menu">
+        <div id="progressSummary"></div>
+        <div class="settings-group">
+            <label style="display:none;"> // hide check box for structured session mode for time being
+                <input type="checkbox" id="timerMode">
+                <span id="structuredModeLabel">Structured Session Mode</span>
+            </label>
+            <label for="levelSelect">Select Starting Level: 
+                <select id="levelSelect">
+                    <option value="1">1-back</option>
+                    <option value="2">2-back</option>
+                    <option value="3">3-back</option>
+                    <option value="4">4-back</option>
+                    <option value="5">5-back</option>
+                    <option value="6">6-back</option>
+                </select>
+            </label>
+        </div>
+        <button id="startBtn">Start Training</button>
+        <p style="font-size:18px;color:#ccc;margin-top:8px;">
+            Difficulty hearing the letters? Try choosing a new voice.
+        </p>
+        <button id="chooseVoiceBtn" class="secondary-btn">Choose Voice</button>
+        <br>
+        <button id="optionsBtn" class="secondary-btn">Options</button>
+    </div>
+    
+    <!-- ===================== OPTIONS SCREEN ===================== -->
+    <div id="optionsScreen" style="display:none;">
+        <h2>Options</h2>
+        <div class="settings-group" style="display:none;"> //hide session length select for time being
+            <label for="sessionLengthSelect">Structured Session Length: 
+                <select id="sessionLengthSelect">
+                    <option value="5">5 Minutes</option>
+                    <option value="10">10 Minutes</option>
+                    <option value="15">15 Minutes</option>
+                </select>
+            </label>
+        </div>
+        <button id="resetStatsBtn" style="background: #f44336; color: white;">Reset All Statistics</button>
+        <br>
+        <button id="homeBtn" class="secondary-btn">Return to Home Screen</button>
+        <p id="resetMessage" style="color: #4caf50; display:none; margin-top: 20px; font-size: 20px;">
+            Statistics successfully reset.
+        </p>
+    </div>
+    
+    <!-- ===================== VOICE SETTINGS PAGE ===================== -->
+    <div id="voiceSettingsScreen" style="display:none;">
+        <h2>Voice Settings</h2>
+        <div class="settings-group">
+            <label for="voiceSelect">Voice (for letters): 
+                <select id="voiceSelect"></select>
+            </label>
+            <button id="testVoiceBtn" class="secondary-btn">Test Voice</button>
+            <p style="font-size:16px;color:#ccc;margin-top:12px; line-height:1.8; text-align:left;">
+                <strong>Recommended voices for clarity:</strong><br><br>
+                <strong>Microsoft Edge:</strong><br>
+                • Microsoft Ava Online (Natural)<br>
+                • Microsoft Aria Online (Natural)<br>
+                • Microsoft Jenny Online (Natural)<br>
+                • Microsoft Michelle Online (Natural)<br><br>
+                <strong>Google Chrome:</strong><br>
+                • Google US English<br><br>
+                You can change this anytime.
+            </p>
+        </div>
+        <button id="voiceBackBtn" class="secondary-btn">Back to Menu</button>
+    </div>
+    
+    <!-- ===================== INSTRUCTIONS & TASK ===================== -->
+    <div id="instructions" style="display:none;">
+        <div id="instructionsBox"></div>
+        <br>
+        <button id="beginTaskBtn">Begin Task</button>
+    </div>
+    
+    <div id="task" style="display:none;">
+        <h2 id="levelLabel"></h2>
+        <div id="fixation">+</div>
+        <button id="matchBtn">MATCH</button>
+        <p style="font-size:16px; color:#999; margin-top:20px;">
+            Press the button or spacebar when you hear a match
+        </p>
+    </div>
+    
+    <div id="results"></div>
+</div>
+
+<!-- Shared modal -->
+<div id="customModal">
+    <div class="modal-content">
+        <p id="modalMessage"></p>
+        <div id="modalButtonsContainer"></div>
+    </div>
+</div>
+
+<script>
+/* ========================================================
+   GLOBAL VARIABLES
+======================================================== */
+let trialTimeout = null;
+let timerInterval = null;
+let n = 1;
+let isi = 2500;
+let trials = 30;
+let sequence = [];
+let index = 0;
+let results = [];
+let trialActive = false;
+let sessionStartTime = 0;
+let timerMode = false;
+let totalSessionAccuracy = [];
+let sessionHits = 0;
+let sessionMisses = 0;
+let sessionFalseAlarms = 0;
+let isTaskRunning = false;
+
+/* ========================================================
+   SPEECH / VOICE LOGIC
+======================================================== */
+let selectedVoice = null;
+const VOICE_STORAGE_KEY = "attentionTrainingPreferredVoiceIndex";
+
+function isWindowsPlatform() {
+    return /win/i.test(navigator.userAgent || "");
+}
+
+function isEdgeBrowser() {
+    const ua = navigator.userAgent || "";
+    return ua.includes("Edg/");
+}
+
+function isChromeBrowser() {
+    const ua = navigator.userAgent || "";
+    return ua.includes("Chrome/") && !isEdgeBrowser();
+}
+
+function populateVoiceList() {
+    const voices = window.speechSynthesis.getVoices();
+    const voiceSelect = document.getElementById("voiceSelect");
+    if (!voiceSelect) return;
+    
+    voiceSelect.innerHTML = "";
+    
+    voices.forEach((voice, i) => {
+        const option = document.createElement("option");
+        option.value = i;
+        option.textContent = `${voice.name} (${voice.lang})${voice.default ? " [default]" : ""}`;
+        voiceSelect.appendChild(option);
+    });
+    
+    const savedIndex = parseInt(localStorage.getItem(VOICE_STORAGE_KEY), 10);
+    if (!isNaN(savedIndex) && voices[savedIndex]) {
+        voiceSelect.value = savedIndex;
+        selectedVoice = voices[savedIndex];
+        return;
+    }
+    
+    let preferred = null;
+    const onWindows = isWindowsPlatform();
+    const onEdge = isEdgeBrowser();
+    const onChrome = isChromeBrowser();
+    
+    if (onWindows && onEdge) {
+        const priorityNames = ["ava", "aria", "jenny", "michelle"];
+        for (const name of priorityNames) {
+            preferred = voices.find(v =>
+                v.name && v.name.toLowerCase().includes("microsoft " + name)
+            );
+            if (preferred) break;
+        }
+    }
+    
+    if (!preferred && onWindows && onChrome) {
+        preferred = voices.find(v =>
+            v.name && v.name.toLowerCase().includes("google us english")
+        ) || null;
+    }
+    
+    if (!preferred) preferred = voices.find(v => v.default) || null;
+    if (!preferred) preferred = voices.find(v => v.lang && v.lang.toLowerCase().includes("en-us")) || null;
+    if (!preferred && voices.length > 0) preferred = voices[0];
+    
+    if (preferred) {
+        selectedVoice = preferred;
+        const index = voices.indexOf(preferred);
+        if (index >= 0) {
+            voiceSelect.value = index;
+        }
+    }
+}
+
+function loadVoices() { 
+    populateVoiceList(); 
+}
+
+if (speechSynthesis.onvoiceschanged !== undefined) {
+    speechSynthesis.onvoiceschanged = loadVoices;
+}
+
+// Initial load
+setTimeout(loadVoices, 100);
+
+function testSelectedVoice() {
+    const utterance = new SpeechSynthesisUtterance(
+        "This is a test. These are the letters you will hear: A, B, C."
+    );
+    if (selectedVoice) utterance.voice = selectedVoice;
+    utterance.rate = 0.9;
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+}
+
+// Voice select handler
+document.addEventListener("DOMContentLoaded", () => {
+    const voiceSelect = document.getElementById("voiceSelect");
+    if (voiceSelect) {
+        voiceSelect.addEventListener("change", (e) => {
+            const voices = window.speechSynthesis.getVoices();
+            const index = parseInt(e.target.value, 10);
+            if (!isNaN(index) && voices[index]) {
+                selectedVoice = voices[index];
+                localStorage.setItem(VOICE_STORAGE_KEY, String(index));
+            }
+        });
+    }
+    
+    const chooseVoiceBtn = document.getElementById("chooseVoiceBtn");
+    const voiceBackBtn = document.getElementById("voiceBackBtn");
+    const testVoiceBtn = document.getElementById("testVoiceBtn");
+    
+    if (chooseVoiceBtn && voiceBackBtn) {
+        chooseVoiceBtn.onclick = () => {
+            hideAllScreens();
+            document.getElementById("voiceSettingsScreen").style.display = "block";
+        };
+        voiceBackBtn.onclick = () => {
+            hideAllScreens();
+            document.getElementById("menu").style.display = "block";
+        };
+    }
+    
+    if (testVoiceBtn) testVoiceBtn.onclick = testSelectedVoice;
+});
+
+// Keep speech synthesis active
+setInterval(() => {
+    if (window.speechSynthesis && !window.speechSynthesis.speaking) {
+        const p = new SpeechSynthesisUtterance("");
+        p.volume = 0;
+        window.speechSynthesis.speak(p);
+    }
+}, 5000);
+
+/* ========================================================
+   PROGRESS & SETTINGS
+======================================================== */
+function loadProgress() {
+    let data = JSON.parse(localStorage.getItem("attentionProgress"));
+    if (!data) {
+        data = {
+            sessions: 0,
+            bestLevel: 1,
+            accuracyHistory: [],
+            bestAccuracyEver: 0,
+            lastCompletedAccuracy: 0,
+            preferredSessionLength: 10
+        };
+    }
+    const validSessionLengths = [5, 10, 15];
+    if (!validSessionLengths.includes(data.preferredSessionLength)) {
+        data.preferredSessionLength = 10;
+    }
+    return data;
+}
+
+function saveProgress(level, accuracy) {
+    let data = loadProgress();
+    data.sessions += 1;
+    data.bestLevel = Math.max(data.bestLevel, level);
+    data.accuracyHistory.push(accuracy);
+    data.lastCompletedAccuracy = accuracy;
+    if (accuracy > data.bestAccuracyEver) data.bestAccuracyEver = accuracy;
+    localStorage.setItem("attentionProgress", JSON.stringify(data));
+}
+
+function displayProgress() {
+    let data = loadProgress();
+    let avg = data.accuracyHistory.length > 0
+        ? Math.round(data.accuracyHistory.reduce((a,b)=>a+b,0) / data.accuracyHistory.length)
+        : 0;
+    
+    document.getElementById("progressSummary").innerHTML = `
+        <h2>Your Progress</h2>
+        <div style="text-align: left; display: inline-block; background: #222; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+            <div class="stat-row">Sessions Completed: <span class="stat-box">${data.sessions}</span></div>
+            <div class="stat-row">Best Level Reached: <span class="stat-box">${data.bestLevel}-back</span></div>
+            <div class="stat-row">Last Session Accuracy: <span class="stat-box">${data.lastCompletedAccuracy || 0}%</span></div>
+            <div class="stat-row">Average Accuracy: <span class="stat-box">${avg}%</span></div>
+            <div class="stat-row">Best Accuracy Ever: <span class="stat-box">${data.bestAccuracyEver}%</span></div>
+        </div>
+    `;
+    
+    const sessionLengthSelect = document.getElementById("sessionLengthSelect");
+    if (sessionLengthSelect) sessionLengthSelect.value = data.preferredSessionLength;
+    
+    document.getElementById("structuredModeLabel").textContent =
+        `${data.preferredSessionLength}-Minute Structured Session Mode`;
+}
+
+displayProgress();
+
+/* ========================================================
+   UI NAVIGATION
+======================================================== */
+function hideAllScreens() {
+    document.getElementById("menu").style.display = "none";
+    document.getElementById("optionsScreen").style.display = "none";
+    document.getElementById("voiceSettingsScreen").style.display = "none";
+    document.getElementById("instructions").style.display = "none";
+    document.getElementById("task").style.display = "none";
+    document.getElementById("results").style.display = "none";
+    document.getElementById("timerDisplay").style.display = "none";
+}
+
+document.getElementById("optionsBtn").onclick = () => {
+    hideAllScreens();
+    document.getElementById("optionsScreen").style.display = "block";
+    document.getElementById("resetMessage").style.display = "none";
+};
+
+document.getElementById("homeBtn").onclick = () => {
+    hideAllScreens();
+    document.getElementById("menu").style.display = "block";
+    displayProgress(); // Make sure stats are refreshed
+};
+
+document.getElementById("sessionLengthSelect").onchange = (e) => {
+    let data = loadProgress();
+    data.preferredSessionLength = parseInt(e.target.value, 10) || 10;
+    localStorage.setItem("attentionProgress", JSON.stringify(data));
+    displayProgress();
+};
+
+document.getElementById("resetStatsBtn").onclick = () => {
+    showYesNoModal(
+        "Are you sure you want to permanently delete all your training statistics?", 
+        function() {
+            localStorage.removeItem("attentionProgress");
+            displayProgress();
+            document.getElementById("resetMessage").style.display = "block";
+            setTimeout(() => {
+                document.getElementById("resetMessage").style.display = "none";
+            }, 3000);
+        }
+    );
+};
+
+/* ========================================================
+   TIMER LOGIC
+======================================================== */
+function startVisualTimer(durationMinutes) {
+    const display = document.getElementById("timerDisplay");
+    display.style.display = "block";
+    display.classList.remove("final-minute");
+    
+    let timeLeft = durationMinutes * 60;
+    
+    function updateDisplay() {
+        if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            display.textContent = "Time's Up!";
+            return;
+        }
+        timeLeft--;
+        let mins = Math.floor(timeLeft / 60);
+        let secs = timeLeft % 60;
+        display.textContent = `Time Remaining: ${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        
+        if (timeLeft < 60 && !display.classList.contains("final-minute")) {
+            display.classList.add("final-minute");
+        }
+    }
+    
+    updateDisplay();
+    timerInterval = setInterval(updateDisplay, 1000);
+}
+
+function stopTimer() {
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+    const display = document.getElementById("timerDisplay");
+    display.style.display = "none";
+    display.classList.remove("final-minute");
+}
+
+/* ========================================================
+   TASK LOGIC
+======================================================== */
+document.getElementById("startBtn").onclick = () => {
+    n = parseInt(document.getElementById("levelSelect").value);
+    hideAllScreens();
+    
+    document.getElementById("instructionsBox").innerHTML =
+        `<strong>Instructions:</strong><br><br>
+        Listen carefully and press the <strong>MATCH</strong> button when the current letter 
+        matches the one <strong>${n}</strong> position${n > 1 ? 's' : ''} back.<br><br>
+        Avoid pressing for non-matches.<br><br>
+        <strong>Tip:</strong> You can use the spacebar instead of clicking the button.`;
+    
+    document.getElementById("instructions").style.display = "block";
+};
+
+document.getElementById("beginTaskBtn").onclick = () => {
+    hideAllScreens();
+    document.getElementById("task").style.display = "block";
+    
+    timerMode = document.getElementById("timerMode").checked;
+    sessionStartTime = Date.now();
+    
+    if (timerMode) startVisualTimer(loadProgress().preferredSessionLength);
+    
+    sessionHits = 0;
+    sessionMisses = 0;
+    sessionFalseAlarms = 0;
+    totalSessionAccuracy = [];
+    isTaskRunning = true;
+    
+    runBlock();
+};
+
+function runBlock() {
+    if (!isTaskRunning) return;
+    
+    if (trialTimeout) clearTimeout(trialTimeout);
+    
+    document.getElementById("levelLabel").textContent = "Level: " + n + "-back";
+    sequence = buildSequence(trials, n);
+    index = 0;
+    results = [];
+    
+    nextTrial();
+}
+
+function nextTrial() {
+    if (!isTaskRunning) return;
+    
+    if (index >= sequence.length) {
+        endBlock();
+        return;
+    }
+    
+    trialActive = true;
+    speak(sequence[index]);
+    
+    let isTarget = (index >= n && sequence[index] === sequence[index-n]);
+    results.push({ target: isTarget, responded: false });
+    
+    trialTimeout = setTimeout(() => {
+        trialActive = false;
+        index++;
+        nextTrial();
+    }, isi);
+}
+
+function speak(letter) {
+    window.speechSynthesis.cancel();
+    setTimeout(() => {
+        const u = new SpeechSynthesisUtterance(letter.toLowerCase());
+        if (selectedVoice) u.voice = selectedVoice;
+        u.rate = 0.9;
+        u.pitch = 1.0;
+        u.volume = 1.0;
+        window.speechSynthesis.speak(u);
+    }, 200);
+}
+
+function registerResponse() {
+    if (!trialActive || !isTaskRunning) return;
+    
+    results[index].responded = true;
+    
+    const btn = document.getElementById("matchBtn");
+    btn.classList.add("pressed");
+    setTimeout(() => btn.classList.remove("pressed"), 150);
+}
+
+document.getElementById("matchBtn").onclick = registerResponse;
+
+document.onkeydown = (e) => {
+    if (e.code === "Space" && isTaskRunning) {
+        e.preventDefault();
+        registerResponse();
+    }
+};
+
+/* ========================================================
+   BLOCK & SESSION RESULTS
+======================================================== */
+function showBlockResults(bAcc, blockHits, blockMisses, blockFAs, callback) {
+    const text = `Block Complete (Level ${n}-back)\n\nTotal Accuracy: ${bAcc}%\nHits: ${blockHits}\nMisses: ${blockMisses}\nFalse Alarms: ${blockFAs}`;
+    showOkModal(text, callback);
+}
+
+function handlePostBlockDecisions(bAcc) {
+    if (bAcc >= 85 && n < 6) {
+        showYesNoModal(
+            "Excellent focus! Would you like to increase the difficulty level?", 
+            () => {
+                n++;
+                showLevelReminder();
+            }, 
+            () => {
+                continueSession();
+            }
+        );
+    } else if (bAcc < 60 && n > 1) {
+        n--;
+        showOkModal(
+            `Performance was a bit low. Dropping to Level ${n} for better practice.`, 
+            () => {
+                showLevelReminder();
+            }
+        );
+    } else {
+        continueSession();
+    }
+}
+
+function continueSession() {
+    if (!isTaskRunning) return;
+    
+    if (timerMode) {
+        let dur = loadProgress().preferredSessionLength * 60000;
+        let timeElapsed = Date.now() - sessionStartTime;
+        if (timeElapsed < dur) {
+            runBlock();
+        } else {
+            endSession();
+        }
+    } else {
+        showYesNoModal(
+            "Would you like to start another block?", 
+            () => {
+                runBlock();
+            }, 
+            () => {
+                goToHomeFromSession();
+            }
+        );
+    }
+}
+
+/* ========================================================
+   ACCURACY CALCULATION
+======================================================== */
+function calculateAccuracy(hits, misses, falseAlarms) {
+    let totalTargets = hits + misses;
+    
+    // If no targets were presented, return 0
+    if (totalTargets === 0) return 0;
+    
+    // Calculate hit rate (0-100)
+    let hitRate = (hits / totalTargets) * 100;
+    
+    // If they got zero hits, accuracy is 0 regardless of false alarms
+    if (hits === 0) return 0;
+    
+    // Penalty: Each false alarm reduces accuracy by 5%
+    let penalty = falseAlarms * 5;
+    
+    // Final accuracy with floor at 0%
+    let accuracy = Math.max(0, hitRate - penalty);
+    
+    return Math.round(accuracy);
+}
+   
+function endBlock() {
+    let bHits = 0, bFA = 0, tTarg = 0, tNon = 0;
+    let blockMisses = 0;
+    
+    for (let i = n; i < results.length; i++) {
+        let r = results[i];
+        if (r.target) {
+            tTarg++;
+            if (r.responded) {
+                bHits++;
+            } else {
+                blockMisses++;
+                sessionMisses++;
+            }
+        } else {
+            tNon++;
+            if (r.responded) {
+                bFA++;
+            }
+        }
+    }
+    
+    sessionHits += bHits;
+    sessionFalseAlarms += bFA;
+    
+    // NEW ACCURACY CALCULATION - Using Option 1
+    let bAcc = calculateAccuracy(bHits, blockMisses, bFA);
+    
+    totalSessionAccuracy.push(bAcc);
+    
+    showBlockResults(bAcc, bHits, blockMisses, bFA, () => {
+        handlePostBlockDecisions(bAcc);
+    });
+}
+
+function goToHomeFromSession() {
+    isTaskRunning = false;
+    stopTimer();
+    window.speechSynthesis.cancel();
+    if (trialTimeout) clearTimeout(trialTimeout);
+    
+    // SAVE PROGRESS BEFORE RETURNING HOME
+    if (totalSessionAccuracy.length > 0) {
+        let avg = Math.round(totalSessionAccuracy.reduce((a,b)=>a+b,0) / totalSessionAccuracy.length);
+        saveProgress(n, avg);
+    }
+    
+    hideAllScreens();
+    document.getElementById("menu").style.display = "block";
+    displayProgress(); // Refresh the stats display
+}
+
+function endSession() {
+    isTaskRunning = false;
+    stopTimer();
+    window.speechSynthesis.cancel();
+    if (trialTimeout) clearTimeout(trialTimeout);
+    
+    hideAllScreens();
+    
+    let div = document.getElementById("results");
+    div.style.display = "block";
+    
+    // Calculate and save progress
+    let avg = totalSessionAccuracy.length > 0
+        ? Math.round(totalSessionAccuracy.reduce((a,b)=>a+b,0) / totalSessionAccuracy.length)
+        : 0;
+    
+    saveProgress(n, avg);
+    
+    let performanceMessage = "";
+    if (avg >= 85) {
+        performanceMessage = "🎉 Outstanding performance!";
+    } else if (avg >= 70) {
+        performanceMessage = "👍 Good work!";
+    } else if (avg >= 60) {
+        performanceMessage = "Keep practicing!";
+    } else {
+        performanceMessage = "Don't give up - practice makes perfect!";
+    }
+    
+    div.innerHTML = `
+        <h2>Session Complete</h2>
+        <p style="font-size: 28px; color: #4caf50; margin: 20px 0;">${performanceMessage}</p>
+        <p style="font-size: 26px;">Session Total Accuracy: <span class="stat-box">${avg}%</span></p>
+        <div style="text-align: left; display: inline-block; background: #222; padding: 20px; border-radius: 10px; margin-top: 20px;">
+            <div class="stat-row">🎯 Hits: <span class="stat-box">${sessionHits}</span></div>
+            <div class="stat-row">❌ Misses: <span style="color: #ff9999; font-weight: bold;">${sessionMisses}</span></div>
+            <div class="stat-row">⚠️ False Alarms: <span style="color: #ff9999; font-weight: bold;">${sessionFalseAlarms}</span></div>
+            <div class="stat-row">📊 Blocks Completed: <span class="stat-box">${totalSessionAccuracy.length}</span></div>
+            <div class="stat-row">🎓 Final Level: <span class="stat-box">${n}-back</span></div>
+        </div>
+        <br><br>
+        <button onclick="returnToMenu()" style="background: #4caf50; color: black; font-weight: bold;">Return to Menu</button>
+    `;
+}
+
+// Add this new function to properly return to menu and refresh stats
+function returnToMenu() {
+    hideAllScreens();
+    document.getElementById("menu").style.display = "block";
+    displayProgress(); // Refresh stats when returning
+}
+   
+
+/* ========================================================
+   SEQUENCE GENERATION
+======================================================== */
+function buildSequence(len, nVal) {
+    let s = [];
+    let t = new Set();
+    let v = len - nVal;
+    let d = Math.round(v * 0.3);
+    
+    while (t.size < d) {
+        let p = Math.floor(Math.random() * v) + nVal;
+        if (!t.has(p-1) && !t.has(p-2)) t.add(p);
+    }
+    
+    for (let i = 0; i < len; i++) {
+        if (i < nVal) {
+            s.push("ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random() * 26)]);
+        } else if (t.has(i)) {
+            s.push(s[i-nVal]);
+        } else {
+            let opts = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").filter(x => x !== s[i-nVal]);
+            s.push(opts[Math.floor(Math.random() * opts.length)]);
+        }
+    }
+    
+    return s;
+}
+
+/* ========================================================
+   MODAL HELPERS
+======================================================== */
+function baseModalSetup(message) {
+    const msgEl = document.getElementById("modalMessage");
+    const m = document.getElementById("customModal");
+    msgEl.textContent = message;
+    m.style.display = "flex";
+    return {
+        container: document.getElementById("modalButtonsContainer"),
+        yesBtn: document.getElementById("modalYesBtn"),
+        noBtn: document.getElementById("modalNoBtn"),
+        modal: m
+    };
+}
+
+function showYesNoModal(message, onYes, onNo) {
+    const { container, yesBtn, noBtn, modal } = baseModalSetup(message);
+    container.innerHTML = "";
+    
+    const yButton = document.createElement("button");
+    yButton.textContent = "Yes";
+    yButton.style.background = "#4caf50";
+    yButton.style.color = "black";
+    yButton.onclick = () => {
+        modal.style.display = "none";
+        if (onYes) onYes();
+    };
+    
+    const nButton = document.createElement("button");
+    nButton.textContent = "No";
+    nButton.style.background = "#f44336";
+    nButton.style.color = "white";
+    nButton.onclick = () => {
+        modal.style.display = "none";
+        if (onNo) onNo();
+    };
+    
+    container.appendChild(yButton);
+    container.appendChild(nButton);
+}
+
+function showOkModal(message, onOk) {
+    const { container, modal } = baseModalSetup(message);
+    container.innerHTML = "";
+    
+    const okButton = document.createElement("button");
+    okButton.textContent = "OK";
+    okButton.style.background = "#4caf50";
+    okButton.style.color = "black";
+    okButton.onclick = () => {
+        modal.style.display = "none";
+        if (onOk) onOk();
+    };
+    
+    container.appendChild(okButton);
+}
+
+function showLevelReminder() {
+    hideAllScreens();
+    
+    document.getElementById("instructionsBox").innerHTML =
+        `<strong>Level Change</strong><br><br>
+        You are now at Level ${n}.<br><br>
+        Press <strong>MATCH</strong> when the current letter matches the one <strong>${n}</strong> position${n > 1 ? 's' : ''} back.`;
+    
+    document.getElementById("instructions").style.display = "block";
+    document.getElementById("beginTaskBtn").onclick = () => {
+        hideAllScreens();
+        document.getElementById("task").style.display = "block";
+        runBlock();
+    };
+}
+</script>
+</body>
+</html>
