@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Engrams — Sharpen Your Memory</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <!-- Master platform styles first -->
+  <link rel="stylesheet" href="../../style.css">
+  <!-- Game-specific styles after, so they win ties -->
+  <link rel="stylesheet" href="engrams.css">
+</head>
+<body>
+  <section id="engrams" class="arcade-screen">
+    <div class="arcade-scanlines"></div>
+
+    <h1>ENGRAMS</h1>
+    <div class="eng-subtitle">Sharpen Your Memory</div>
+
+    <!-- START SCREEN -->
+    <div class="eng-panel" id="engStart">
+      <p class="eng-instructions">
+        Level 1: Verbal Memory.<br><br>
+        You will hear a list of words read aloud. Listen carefully and try to
+        remember as many as you can. When the list finishes, type in every word
+        you can recall. You will get several chances. Make sure your sound is on.
+      </p>
+      <div class="button-row">
+        <button id="engBeginBtn">BEGIN</button>
+      </div>
+    </div>
+
+    <!-- LISTENING SCREEN -->
+    <div class="eng-panel eng-hidden" id="engListen">
+      <p class="eng-listen-msg" id="engListenMsg">Listen…</p>
+      <div class="eng-speaker" id="engSpeaker">🔊</div>
+      <div class="eng-current-word" id="engCurrentWord"></div>
+    </div>
+
+    <!-- RECALL SCREEN -->
+    <div class="eng-panel eng-hidden" id="engRecall">
+      <p class="eng-recall-prompt" id="engRecallPrompt">
+        Type in every word you can recall.
+      </p>
+      <div class="eng-slots" id="engSlots"></div>
+      <div class="button-row">
+        <button id="engSubmitBtn">SUBMIT</button>
+      </div>
+    </div>
+
+    <!-- FEEDBACK SCREEN -->
+    <div class="eng-panel eng-hidden" id="engFeedback">
+      <p class="feedback" id="engFeedbackText"></p>
+      <div class="button-row">
+        <button id="engContinueBtn">CONTINUE</button>
+      </div>
+    </div>
+
+    <!-- MESSAGE SCREEN (transitions, no scoring) -->
+    <div class="eng-panel eng-hidden" id="engMessage">
+      <p class="eng-message-text" id="engMessageText"></p>
+      <div class="button-row">
+        <button id="engMessageBtn">CONTINUE</button>
+      </div>
+    </div>
+
+    <!-- DISTRACTOR TASK SCREEN -->
+    <div class="eng-panel eng-hidden" id="engDistractor">
+      <p class="eng-distractor-instr" id="engDistractorInstr"></p>
+      <div class="eng-timer" id="engTimer"></div>
+      <div class="eng-distractor-stimuli" id="engStimuli">
+        <div class="eng-stim" id="engStimA"></div>
+        <div class="eng-stim" id="engStimB"></div>
+      </div>
+    </div>
+
+    <!-- Bottom actions: uses shared.js handlers -->
+    <div class="game-bottom-actions button-row">
+      <button class="reset-btn" id="resetBtn">RESET</button>
+      <button class="back-btn" id="backBtn">HOME</button>
+    </div>
+  </section>
+
+  <!-- optional shuffle sound used by shared.js reset -->
+  <audio id="shuffleSound" src="../../assets/sounds/shuffle.mp3" preload="auto"></audio>
+
+  <!-- Game logic first, shared platform JS after -->
+  <script src="engrams.js"></script>
+  <script src="../../shared.js"></script>
+</body>
+</html>
