@@ -7,50 +7,108 @@
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <style>
-    .button-row {
-      gap: 8px;
+    /* --- Pyramid button layout --- */
+    .button-pyramid {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin: 15px 0;
+      width: 100%;
+    }
+    .button-pyramid .button-row {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: stretch;
+      gap: 10px;
+      margin: 0;
+      width: auto;
     }
     .game-btn {
-      padding: 6px 12px;
+      padding: 8px 12px;
       font-size: 0.7rem;
+      line-height: 1.3;
       border-radius: 8px;
-      min-width: 90px;
-      min-height: 28px;
-      margin: 2px;
+      min-width: 150px;
+      max-width: 190px;
+      min-height: 44px;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      white-space: normal;   /* let long names wrap instead of bunching */
+    }
+
+    /* Keep the pyramid on tablets/phones, just tighten it up */
+    @media (max-width: 600px) {
+      .button-pyramid .button-row {
+        flex-direction: row;      /* override the global column rule */
+        align-items: stretch;
+        width: 100%;
+        gap: 8px;
+      }
+      .button-pyramid .game-btn {
+        width: auto;              /* override width:100% from global rule */
+        min-width: 112px;
+        max-width: 46vw;
+        font-size: 0.55rem;
+        min-height: 42px;
+        padding: 6px 8px;
+      }
     }
   </style>
 </head>
-  <body>
+<body>
   <div class="starfield-bg"></div>
   <section class="arcade-screen" id="homeScreen" style="position:relative;overflow:hidden;">
     <div class="arcade-scanlines"></div>
-  <!-- Title -->
-  <h1>NEUROCADE</h1>
-  <div class="press-start-prompt">INSERT COIN</div>
+
+    <!-- Title -->
+    <h1>NEUROCADE</h1>
+    <div class="press-start-prompt">INSERT COIN</div>
+
     <!-- Instructions / Subtitle -->
-    <div class="instructions"style="font-size:80%;">
-      Welcome! Select a game below to start. Each game is designed to tax certain cognitive skills more than others. They are meant to be fun but also, in most cases, progressively challenging. Explore and test/develope your skills!
+    <div class="instructions" style="font-size:80%;">
+      Welcome! Select a game below to start. Each game is designed to tax certain cognitive skills more than others. They are meant to be fun but also, in most cases, progressively challenging. Explore and test/develop your skills!
     </div>
-    <!-- Game Buttons -->
-    <div class="button-row">
-  <button class="game-btn" data-href="games/classicmatching/game.html">Classic Matching Game</button>
-  <button class="game-btn" data-href="games/duelnback/duelnback.html">Dual N-Back</button>
-  <button class="game-btn" data-href="games/Auditory-NBack/auditorynbackgame.html">Auditory N-Back</button>
-  <button class="game-btn" data-href="alert">Coming Soon</button>
-  <button class="game-btn" data-href="alert">Driving Directions Game</button>
-  <button class="game-btn" data-href="games/pacedvisualnumericalnback/pvnnbgame.html">Paced Visual N-Back</button>
-  <button class="game-btn" data-href="games/memorytrace/memorytrace.html">Memory Trace</button>
-  <button class="game-btn" data-href="games/engrams/engrams.html">Engrams</button>
+
+    <!-- Game Buttons: Pyramid (1 / 3 / 4) -->
+    <div class="button-pyramid">
+
+      <!-- Apex -->
+      <div class="button-row">
+        <button class="game-btn" data-href="alert">Coming Soon</button>
+      </div>
+
+      <!-- Middle row -->
+      <div class="button-row">
+        <button class="game-btn" data-href="games/classicmatching/game.html">Classic Matching Game</button>
+        <button class="game-btn" data-href="games/duelnback/duelnback.html">Dual N-Back</button>
+        <button class="game-btn" data-href="games/Auditory-NBack/auditorynbackgame.html">Auditory N-Back</button>
+      </div>
+
+      <!-- Base row -->
+      <div class="button-row">
+        <button class="game-btn" data-href="alert">Driving Directions Game</button>
+        <button class="game-btn" data-href="games/pacedvisualnumericalnback/pvnnbgame.html">Paced Visual N-Back</button>
+        <button class="game-btn" data-href="games/memorytrace/memorytrace.html">Memory Trace</button>
+        <button class="game-btn" data-href="games/engrams/engrams.html">Engrams</button>
+      </div>
+
     </div>
+
     <!-- Optional Footer / Status -->
-    <div class="feedback"style="font-size:66%;">
+    <div class="feedback" style="font-size:66%;">
       Have fun and challenge yourself!
     </div>
-    <div style="width:100%;display:flex;justify-content:center;margin-top:40px;">
-  </div>
-  <img src="assets/images/8bitarcade.png" alt="8-bit Arcade" id="arcade-footer-img" style="position:absolute;left:50%;transform:translateX(-50%);bottom:18px;max-width:211px;width:53%;height:auto;filter:drop-shadow(0 0 12px #0f0);z-index:2;" />
-    </div>
+
+    <img src="assets/images/8bitarcade.png" alt="8-bit Arcade" id="arcade-footer-img"
+         style="position:absolute;left:50%;transform:translateX(-50%);bottom:18px;max-width:211px;width:53%;height:auto;filter:drop-shadow(0 0 12px #0f0);z-index:2;" />
   </section>
+
   <script src="starfield.js"></script>
   <script>
     const gameStartSound = new Audio('assets/sounds/gamestart.mp3');
