@@ -1,0 +1,1717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Galaga — Sprite &amp; Sound Edition (patched + shield cheat)</title>
+<style>
+  html,body{margin:0;height:100%;background:#04050b;display:flex;align-items:center;
+            justify-content:center;font-family:"Courier New",monospace;overflow:hidden;}
+  canvas{display:block;background:#04050b;border:2px solid #1b2a4a;border-radius:6px;
+         box-shadow:0 0 46px rgba(60,120,255,.28);touch-action:none;
+         image-rendering:pixelated;image-rendering:crisp-edges;}
+  #hint{color:#4a6ea5;font-size:12px;text-align:center;margin-top:8px;letter-spacing:1px;}
+</style>
+</head>
+<body>
+<!-- ===================================================================
+     PATCH 9 NOTE (part 1 of 3) — CONTROL HINT UPDATED
+     Was: "← → MOVE · SPACE FIRE ..."
+     Now advertises vertical thrust, because ↑/↓ became real movement keys
+     in PATCH 4. IMPORTANT: ArrowUp / W used to be alternate FIRE keys and
+     no longer are. Fire is now SPACE / Z / J only.
+
+     PATCH 10 NOTE: the cheat code is deliberately NOT listed here — it is
+     a cheat. It is documented in the PATCH 10 blocks below instead.
+     =================================================================== -->
+<div>
+  <canvas id="game" width="480" height="640"></canvas>
+  <div id="hint">← → ↑ ↓ MOVE&nbsp;·&nbsp;SPACE FIRE&nbsp;·&nbsp;P PAUSE&nbsp;·&nbsp;M MUTE&nbsp;·&nbsp;R RESTART&nbsp;·&nbsp;` DEBUG</div>
+</div>
+
+<script>
+/* =====================================================================
+   HARDENING NOTE (A) — GLOBAL ERROR NET
+   Original symptom: "I hit space and it just freezes."
+   Cause: an exception thrown inside the rAF callback killed the loop
+   silently, because requestAnimationFrame() was called at the END of
+   loop(). Anything that threw meant the next frame was never scheduled.
+   This listener catches errors thrown OUTSIDE the loop (e.g. during
+   sprite baking at startup) and paints them on the canvas so a blank or
+   frozen screen always tells you why. See also HARDENING NOTE (E).
+   ===================================================================== */
+window.addEventListener("error", ev => {
+  try{
+    const c = document.getElementById("game"), g = c.getContext("2d");
+    g.setTransform(1,0,0,1,0,0);
+    g.fillStyle = "#2a0409"; g.fillRect(0,0,c.width,60);
+    g.fillStyle = "#ff8a90"; g.font = "12px monospace";
+    g.fillText("STARTUP ERROR: " + ev.message, 10, 24);
+    g.fillText(String(ev.filename||"").split("/").pop() + " line " + ev.lineno, 10, 42);
+  }catch(e){}
+});
+
+(() => {
+"use strict";
+
+/* ==================================================================
+   0. CANVAS / CONFIG / SAFE STORAGE
+================================================================== */
+const cvs = document.getElementById("game");
+const ctx = cvs.getContext("2d");
+const W = cvs.width, H = cvs.height;
+ctx.imageSmoothingEnabled = false;
+
+const PX = 2;
+const COLS = 8, ROWS = 4, COL_W = 46, ROW_H = 38;
+const FORM_X0 = W/2 - ((COLS-1)*COL_W)/2, FORM_Y0 = 92;
+
+const rand  = (a,b)=>a+Math.random()*(b-a);
+const randR = r=>rand(r[0],r[1]);
+const clamp = (v,a,b)=>v<a?a:v>b?b:v;
+
+/* =====================================================================
+   PATCH 1 NOTE — PLAYER FLIGHT BAND + CAPTURE RUN ARCHETYPES
+   ---------------------------------------------------------------------
+   THE BUG: the tractor beam could never touch the player. Do the maths
+   on the old constants:
+       hoverY   = H*0.42                      = 268.8
+       apex     = hoverY + 12                 = 280.8
+       beamLen  = 270
+       beam tip = 550.8
+       player y = H - 58 (a CONSTANT)         = 582
+       player top edge (y - hh)               = 571
+   The cone stopped ~20px above the ship's nose on EVERY run, from a
+   single hardcoded altitude, and the player had no Y velocity at all,
+   so there was no way to close the gap. Capture was impossible and the
+   escorts were harmless.
+
+   THE FIX, two halves:
+   1) PLAYER{} gives the fighter a 256px vertical band (y 346..602) with
+      a deliberately slower vertical speed, so climbing is a commitment.
+   2) CAP.runs[] replaces the single hoverY with 5 archetypes, each with
+      its own hover altitude, cone length, descent sweep, and "aim"
+      (how strongly the boss stations itself over you). Reach table:
+        high  boss 218  tip 480  -> only catches you if you CLIMB
+        mid   boss 294->356      -> tip 606->668, reaches the floor
+        low   boss 384  tip 696  -> reaches the floor
+        deep  boss 422  tip 774  -> comes down in your face
+        sweep boss 192->480      -> descends 120px/s past the floor
+      4 of 5 now reach the bottom row; "high" is the one that rewards
+      having vertical control.
+
+   NOTE ON CAP.beamLen: it survives ONLY as the height of the baked
+   beam sprite canvas (see the bake IIFE below). Per-run length now
+   lives in cap.len and is applied by stretching the sprite in
+   drawImage(), so a run may exceed the baked height freely.
+   ===================================================================== */
+const PLAYER = {
+  baseY:  H - 58,        // 582 - spawn / rest altitude
+  yMin:   H * 0.54,      // 346 - highest it may climb
+  yMax:   H - 38,        // 602 - lowest it may drop
+  speedX: 275,
+  speedY: 200,           // slower than lateral: climbing is a commitment
+  recenter: 0            // px/s auto-drift back to baseY (0 = free flight)
+};
+
+const CAP = {
+  firstDelay:[5,8], repeatDelay:[7,11],
+  approachSpd:170,
+  beamOpen:.50, beamHold:1.90, beamClose:.35,
+  beamLen:300,                  // ONLY the baked cone sprite height now
+  beamHalfW:46, pullTime:1.7,
+  captiveOff:-28, friendlyFire:false, minWave:2,
+
+  /* run archetypes: hoverY is a fraction of H, sweep is px/s of descent,
+     aim 0..1 = how strongly the boss stations itself over the player */
+  runs:[
+    { name:"high",  hoverY:0.34, len:250, sweep:0,   aim:0.35 },
+    { name:"mid",   hoverY:0.46, len:300, sweep:26,  aim:0.70 },
+    { name:"low",   hoverY:0.60, len:300, sweep:0,   aim:0.90 },
+    { name:"deep",  hoverY:0.66, len:340, sweep:0,   aim:1.00 },
+    { name:"sweep", hoverY:0.30, len:290, sweep:120, aim:0.55 }
+  ],
+  maxHoverY: H * 0.78,          // boss never descends past this
+  pull: 40,                     // px/s sideways tug from an open cone
+  telegraph: 0.45               // seconds of aiming line before cone opens
+};
+
+/* =====================================================================
+   PATCH 10 NOTE (part 1 of 9) — SHIELD CHEAT CONFIG  *** NEW FEATURE ***
+   ---------------------------------------------------------------------
+   REQUEST: type "c", "1", ENTER during gameplay to gain a shield that
+   absorbs 3 hits, so it takes 4 hits to lose one life. Shield is a
+   flickering ring that changes colour as it degrades, resets to full on
+   each new life, and is CLEARED on game over / restart so the code must
+   be re-entered.
+
+   CHARGE / COLOUR MODEL (ramp is indexed by charges REMAINING):
+       3 charges -> green  (blue on a respawn, see respawnTop below)
+       2 charges -> yellow
+       1 charge  -> red
+       0 charges -> no ring drawn; the NEXT hit costs a life
+     => exactly 4 hits per life while the cheat is armed.
+
+   SPEC AMBIGUITY, RESOLVED DELIBERATELY: the request said the shield is
+   GREEN "when first activated" but BLUE when "the next life starts
+   over". Both are honoured: activating the code paints the top charge
+   green, and every subsequent respawn paints the top charge blue
+   (respawnTop). Set respawnTop:null to make respawns green as well.
+
+   TWO INTERACTIONS THE SPEC DID NOT COVER:
+     blocksCapture:false   - the tractor beam still captures you through
+                             a live shield. If it blocked capture you
+                             could never go dual while cheating, since
+                             capture is the only route to a dual fighter.
+     protectsWingman:true  - the shield absorbs BEFORE a dual fighter
+                             loses its wingman, so while dual it is
+                             3 shield hits + wingman + life = 5 hits.
+                             Set false to lose the wingman first instead.
+
+   grace:0.9 is essential, not cosmetic. Enemy collision boxes overlap
+   the player for many consecutive frames, so without a brief
+   invulnerability window after each absorb a single diver would drain
+   all three charges in ~3 frames.
+   ===================================================================== */
+const SHIELD = {
+  code: "c1",              // typed sequence, then ENTER
+  charges: 3,              // absorbed hits; the (charges+1)th hit kills
+  grace: 0.9,              // seconds of invulnerability after an absorb
+  ramp: [null, "#ff4d5a", "#ffd24a", "#3ddc84"],   // index = charges left
+  respawnTop: "#4fa8ff",   // top-charge colour on a fresh life (null = use ramp)
+  radius: 22,              // ring radius, single fighter
+  radiusDual: 20,          // ring radius per hull when dual
+  blocksCapture: false,    // see note above
+  protectsWingman: true,   // see note above
+  bufferTime: 2.5          // seconds before a partially typed code expires
+};
+
+/* =====================================================================
+   HARDENING NOTE (B) — SAFE LOCALSTORAGE
+   Reading localStorage from a file:// URL, or in some privacy modes,
+   throws SecurityError. That happened during state setup, before the
+   loop even started, and was one candidate for the original freeze.
+   All access now goes through this try/catch wrapper.
+   ===================================================================== */
+const Store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v === null ? d : v; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, v); }catch(e){} }
+};
+
+/* ==================================================================
+   1. SPRITE ENGINE
+================================================================== */
+const S = {};
+
+function bake(rows, pal, scale = PX){
+  const w = rows[0].length, h = rows.length;
+  const c = document.createElement("canvas");
+  c.width = w*scale; c.height = h*scale;
+  const g = c.getContext("2d");
+  for(let y=0;y<h;y++){
+    const row = rows[y];
+    for(let x=0;x<row.length;x++){
+      const col = pal[row[x]];
+      if(!col) continue;
+      g.fillStyle = col;
+      g.fillRect(x*scale, y*scale, scale, scale);
+    }
+  }
+  return c;
+}
+
+const ART_FIGHTER = [
+'......W......','......W......','.....WRW.....','.....WRW.....',
+'....WWWWW....','....WWWWW....','.R..WWWWW..R.','RRR.WWWWW.RRR',
+'RRRWWWWWWWRRR','RRRWWWWWWWRRR','RRR.WWWWW.RRR','.R...W.W...R.',
+'.....F.F.....'];
+const ART_BEE_A = [
+'.M.........M.','.MM.......MM.','..MM.....MM..','...MM.B.MM...',
+'....BBBBB....','...BBBBBBB...','..BBWBBBWBB..','..BBBBBBBBB..',
+'..BB.BBB.BB..','...B..B..B...','.............'];
+const ART_BEE_B = [
+'.............','.MM.......MM.','.MMM.....MMM.','..MMM.B.MMM..',
+'....BBBBB....','...BBBBBBB...','..BBWBBBWBB..','..BBBBBBBBB..',
+'..BB.BBB.BB..','...B..B..B...','.............'];
+const ART_BUT_A = [
+'.AA.......AA.','.AAA.....AAA.','..AAA...AAA..','...AA.B.AA...',
+'....BBBBB....','...BBBBBBB...','..BBWBBBWBB..','..BBBBBBBBB..',
+'...BB.B.BB...','..A..B.B..A..','.AA.......AA.'];
+const ART_BUT_B = [
+'.............','.AA.......AA.','..AAA...AAA..','...AA.B.AA...',
+'....BBBBB....','...BBBBBBB...','..BBWBBBWBB..','..BBBBBBBBB..',
+'...BB.B.BB...','..A..B.B..A..','.............'];
+const ART_BOSS_A = [
+'..A.........A..','..AA.......AA..','...AAA...AAA...','....AA.Y.AA....',
+'.....BBBBB.....','....BBBBBBB....','...BBWBBBWBB...','..BBBBBBBBBBB..',
+'..BB.BBBBB.BB..','..B...BBB...B..','.....B...B.....','....AA...AA....',
+'...A.......A...'];
+const ART_BOSS_B = [
+'...............','..AA.......AA..','..AAA.....AAA..','...AAA.Y.AAA...',
+'.....BBBBB.....','....BBBBBBB....','...BBWBBBWBB...','..BBBBBBBBBBB..',
+'..BB.BBBBB.BB..','..B...BBB...B..','.....B...B.....','....A.....A....',
+'...............'];
+const ART_PSHOT = ['.W.','.W.','.Y.','.Y.','.Y.','.O.','.O.','.O.'];
+const ART_ESHOT = ['..W..','.OWO.','.ORO.','.ORO.','.ORO.','..R..','..R..'];
+
+S.fighter0 = bake(ART_FIGHTER, { W:"#f2f8ff", R:"#ff3b46", F:"#ffe066" });
+S.fighter1 = bake(ART_FIGHTER, { W:"#f2f8ff", R:"#ff3b46", F:"#ff8a1e" });
+S.captive0 = bake(ART_FIGHTER, { W:"#bfe6ff", R:"#2f6fb5" });
+S.bee0     = bake(ART_BEE_A,  { M:"#ffd24a", B:"#4fa8ff", W:"#05060d" });
+S.bee1     = bake(ART_BEE_B,  { M:"#ffd24a", B:"#4fa8ff", W:"#05060d" });
+S.butter0  = bake(ART_BUT_A,  { A:"#ffd24a", B:"#ff4d5a", W:"#05060d" });
+S.butter1  = bake(ART_BUT_B,  { A:"#ffd24a", B:"#ff4d5a", W:"#05060d" });
+S.bossG0   = bake(ART_BOSS_A, { A:"#ffd24a", B:"#3ddc84", W:"#05060d", Y:"#ff4d5a" });
+S.bossG1   = bake(ART_BOSS_B, { A:"#ffd24a", B:"#3ddc84", W:"#05060d", Y:"#ff4d5a" });
+S.bossB0   = bake(ART_BOSS_A, { A:"#ffd24a", B:"#4fa8ff", W:"#05060d", Y:"#ff4d5a" });
+S.bossB1   = bake(ART_BOSS_B, { A:"#ffd24a", B:"#4fa8ff", W:"#05060d", Y:"#ff4d5a" });
+S.pshot    = bake(ART_PSHOT, { W:"#ffffff", Y:"#fff07a", O:"#ffb020" });
+S.eshot    = bake(ART_ESHOT, { W:"#ffe9d0", O:"#ff8f3a", R:"#ff3b2b" });
+
+/* =====================================================================
+   PATCH 9 NOTE (part 2 of 3) — THRUST FLAME SPRITES
+   Added because the player can now move vertically (PATCH 4). Without a
+   visible exhaust there is no feedback that you are climbing, and the
+   new flight band feels unresponsive. Two frames, alternated at 24Hz,
+   scaled by p.thrust.
+   ===================================================================== */
+S.flameA = bake(['.F.','FYF','FYF','.F.','.f.'], { F:"#ff8a1e", Y:"#fff07a", f:"#ff3b46" });
+S.flameB = bake(['.F.','FYF','.F.','.f.'],       { F:"#ff8a1e", Y:"#fff07a", f:"#ff3b46" });
+
+function dot(size, color){
+  const c = document.createElement("canvas"); c.width = c.height = size;
+  const g = c.getContext("2d"); g.fillStyle = color; g.fillRect(0,0,size,size);
+  return c;
+}
+S.star0 = dot(PX, "#8fb7ee"); S.star1 = dot(PX, "#cfe4ff"); S.star2 = dot(PX*2, "#ffffff");
+S.sparkW = dot(PX, "#fff6c8"); S.sparkY = dot(PX, "#ffd24a");
+S.sparkO = dot(PX, "#ff8f3a"); S.sparkB = dot(PX, "#7fd4ff");
+const SPARKS_WARM = [S.sparkW, S.sparkY, S.sparkO];
+const SPARKS_COLD = [S.sparkW, S.sparkB];
+
+function makeExplosion(name, size, frames, colors, seed, blocks){
+  let s = seed >>> 0;
+  const rnd = () => ((s = (s*1664525 + 1013904223) >>> 0) / 4294967296);
+  const pts = [];
+  for(let i=0;i<blocks;i++) pts.push({ a:rnd()*Math.PI*2, sp:.30+rnd()*.70, sz:1+Math.floor(rnd()*2) });
+  const out = [];
+  for(let f=0;f<frames;f++){
+    const c = document.createElement("canvas"); c.width = c.height = size*PX;
+    const g = c.getContext("2d");
+    const k = (f+1)/frames, cx = size*PX/2, cy = size*PX/2, R = (size*PX/2)*k;
+    if(f < 2){
+      g.fillStyle = colors[0];
+      const r = (size*PX/2)*(f===0 ? .34 : .5);
+      g.fillRect(cx-r, cy-r*.7, r*2, r*1.4);
+      g.fillRect(cx-r*.7, cy-r, r*1.4, r*2);
+    }
+    for(const p of pts){
+      const d = R*p.sp;
+      const bx = Math.round((cx + Math.cos(p.a)*d)/PX)*PX;
+      const by = Math.round((cy + Math.sin(p.a)*d)/PX)*PX;
+      const bs = Math.max(PX, Math.round(p.sz*PX*(1.25-k)));
+      g.fillStyle = colors[Math.min(colors.length-1, Math.floor(k*colors.length))];
+      g.fillRect(bx-bs/2, by-bs/2, bs, bs);
+    }
+    out.push(c);
+  }
+  S[name] = out;
+}
+makeExplosion("boomE", 22, 5, ["#ffffff","#fff07a","#ffb020","#ff5a2b","#8c1420"], 12345, 22);
+makeExplosion("boomP", 34, 6, ["#ffffff","#d8f4ff","#7fd4ff","#4fa8ff","#123f7a"], 999,   30);
+
+/* Beam cone frames. Height is CAP.beamLen; per-run lengths are achieved
+   by stretching this canvas in drawBeam() (see PATCH 1 + PATCH 7). */
+(() => {
+  const N = 8, w = CAP.beamHalfW*2, h = CAP.beamLen, frames = [];
+  for(let f=0;f<N;f++){
+    const c = document.createElement("canvas"); c.width = w; c.height = h;
+    const g = c.getContext("2d");
+    g.save();
+    g.beginPath();
+    g.moveTo(w/2-4,0); g.lineTo(w/2+4,0); g.lineTo(w,h); g.lineTo(0,h); g.closePath(); g.clip();
+    const grd = g.createLinearGradient(0,0,0,h);
+    grd.addColorStop(0,"rgba(150,255,215,.45)");
+    grd.addColorStop(1,"rgba(79,168,255,.04)");
+    g.fillStyle = grd; g.fillRect(0,0,w,h);
+    for(let k=0;k<7;k++){
+      const ph = (((f/N)+k/7)%1)*2-1;
+      g.globalAlpha = .30;
+      g.fillStyle = k%2 ? "#e6fff6" : "#7fd4ff";
+      g.beginPath();
+      g.moveTo(w/2-2,0); g.lineTo(w/2+2,0);
+      g.lineTo(w/2+(ph+.14)*w/2,h); g.lineTo(w/2+ph*w/2,h);
+      g.closePath(); g.fill();
+    }
+    g.restore();
+    g.globalAlpha = .85; g.strokeStyle = "#8dffd0"; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(w/2-4,0); g.lineTo(0,h); g.moveTo(w/2+4,0); g.lineTo(w,h); g.stroke();
+    frames.push(c);
+  }
+  S.beam = frames;
+})();
+
+/* ---------- 5x7 bitmap font ---------- */
+const FONT = {
+"0":[0x0E,0x11,0x13,0x15,0x19,0x11,0x0E],"1":[0x04,0x0C,0x04,0x04,0x04,0x04,0x0E],
+"2":[0x0E,0x11,0x01,0x02,0x04,0x08,0x1F],"3":[0x1F,0x02,0x04,0x02,0x01,0x11,0x0E],
+"4":[0x02,0x06,0x0A,0x12,0x1F,0x02,0x02],"5":[0x1F,0x10,0x1E,0x01,0x01,0x11,0x0E],
+"6":[0x06,0x08,0x10,0x1E,0x11,0x11,0x0E],"7":[0x1F,0x11,0x01,0x02,0x04,0x04,0x04],
+"8":[0x0E,0x11,0x11,0x0E,0x11,0x11,0x0E],"9":[0x0E,0x11,0x11,0x0F,0x01,0x02,0x1C],
+"A":[0x0E,0x11,0x11,0x1F,0x11,0x11,0x11],"B":[0x1E,0x11,0x11,0x1E,0x11,0x11,0x1E],
+"C":[0x0E,0x11,0x10,0x10,0x10,0x11,0x0E],"D":[0x1C,0x12,0x11,0x11,0x11,0x12,0x1C],
+"E":[0x1F,0x10,0x10,0x1E,0x10,0x10,0x1F],"F":[0x1F,0x10,0x10,0x1E,0x10,0x10,0x10],
+"G":[0x0E,0x11,0x10,0x17,0x11,0x11,0x0F],"H":[0x11,0x11,0x11,0x1F,0x11,0x11,0x11],
+"I":[0x1F,0x04,0x04,0x04,0x04,0x04,0x1F],"J":[0x0F,0x02,0x02,0x02,0x02,0x12,0x0C],
+"K":[0x11,0x12,0x14,0x18,0x14,0x12,0x11],"L":[0x10,0x10,0x10,0x10,0x10,0x10,0x1F],
+"M":[0x11,0x1B,0x15,0x15,0x11,0x11,0x11],"N":[0x11,0x19,0x15,0x13,0x11,0x11,0x11],
+"O":[0x0E,0x11,0x11,0x11,0x11,0x11,0x0E],"P":[0x1E,0x11,0x11,0x1E,0x10,0x10,0x10],
+"Q":[0x0E,0x11,0x11,0x11,0x15,0x12,0x0D],"R":[0x1E,0x11,0x11,0x1E,0x14,0x12,0x11],
+"S":[0x0F,0x10,0x10,0x0E,0x01,0x01,0x1E],"T":[0x1F,0x04,0x04,0x04,0x04,0x04,0x04],
+"U":[0x11,0x11,0x11,0x11,0x11,0x11,0x0E],"V":[0x11,0x11,0x11,0x11,0x11,0x0A,0x04],
+"W":[0x11,0x11,0x11,0x15,0x15,0x1B,0x11],"X":[0x11,0x11,0x0A,0x04,0x0A,0x11,0x11],
+"Y":[0x11,0x11,0x0A,0x04,0x04,0x04,0x04],"Z":[0x1F,0x01,0x02,0x04,0x08,0x10,0x1F],
+"!":[0x04,0x04,0x04,0x04,0x04,0x00,0x04],"-":[0,0,0,0x1F,0,0,0],
+".":[0,0,0,0,0,0x0C,0x0C],":":[0,0x0C,0x0C,0,0x0C,0x0C,0],
+"+":[0,0x04,0x04,0x1F,0x04,0x04,0],"/":[0x01,0x02,0x02,0x04,0x08,0x08,0x10],
+"(":[0x02,0x04,0x08,0x08,0x08,0x04,0x02],")":[0x08,0x04,0x02,0x02,0x02,0x04,0x08],
+"*":[0,0x11,0x0A,0x1F,0x0A,0x11,0],",":[0,0,0,0,0x0C,0x04,0x08],
+"'":[0x04,0x04,0,0,0,0,0],"?":[0x0E,0x11,0x01,0x06,0x04,0,0x04]
+};
+const glyphCache = new Map();
+function glyph(ch, sc, color){
+  const key = ch+"|"+sc+"|"+color;
+  let g = glyphCache.get(key);
+  if(g) return g;
+  /* HARDENING NOTE (C): unknown characters cache a BLANK tile instead of
+     dereferencing undefined bitmask rows and throwing mid-render. */
+  const bits = FONT[ch];
+  const c = document.createElement("canvas");
+  c.width = 5*sc; c.height = 7*sc;
+  if(bits){
+    const d = c.getContext("2d"); d.fillStyle = color;
+    for(let y=0;y<7;y++) for(let x=0;x<5;x++)
+      if(bits[y] & (1 << (4-x))) d.fillRect(x*sc, y*sc, sc, sc);
+  }
+  glyphCache.set(key, c);
+  return c;
+}
+const textW = (s, sc) => s.length*6*sc - sc;
+function drawText(str, x, y, sc, color, align = "left", glow = false){
+  str = String(str).toUpperCase();
+  let px = x;
+  if(align === "center") px = x - textW(str, sc)/2;
+  if(align === "right")  px = x - textW(str, sc);
+  if(glow){ ctx.shadowColor = color; ctx.shadowBlur = 10; }
+  for(let i=0;i<str.length;i++){
+    if(str[i] !== " ") ctx.drawImage(glyph(str[i], sc, color), Math.round(px), Math.round(y));
+    px += 6*sc;
+  }
+  ctx.shadowBlur = 0;
+}
+function blit(img, x, y, rot = 0, sc = 1, alpha = 1){
+  if(!img) return;   /* HARDENING NOTE (D): missing sprite = skip draw, never
+                        drawImage(undefined), which throws and killed frames. */
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(x, y);
+  if(rot) ctx.rotate(rot);
+  const w = img.width*sc, h = img.height*sc;
+  ctx.drawImage(img, -w/2, -h/2, w, h);
+  ctx.restore();
+}
+
+/* Optional hooks to swap baked art for a real PNG sheet. */
+window.GalagaSprites = {
+  swap(name, img, sx, sy, sw, sh, scale = PX){
+    const c = document.createElement("canvas");
+    c.width = sw*scale; c.height = sh*scale;
+    const g = c.getContext("2d"); g.imageSmoothingEnabled = false;
+    g.drawImage(img, sx, sy, sw, sh, 0, 0, sw*scale, sh*scale);
+    S[name] = c;
+  },
+  swapFrames(name, img, rects, scale = PX){
+    S[name] = rects.map(r => {
+      const c = document.createElement("canvas");
+      c.width = r[2]*scale; c.height = r[3]*scale;
+      const g = c.getContext("2d"); g.imageSmoothingEnabled = false;
+      g.drawImage(img, r[0], r[1], r[2], r[3], 0, 0, r[2]*scale, r[3]*scale);
+      return c;
+    });
+  }
+};
+
+/* startup self-test: names render() will ask for */
+(() => {
+  const need = ["fighter0","fighter1","captive0","bee0","bee1","butter0","butter1",
+                "bossG0","bossG1","bossB0","bossB1","pshot","eshot","flameA","flameB",
+                "star0","star1","star2","boomE","boomP","beam"];
+  const missing = need.filter(n => !S[n]);
+  if(missing.length) console.warn("[galaga] missing sprites:", missing);
+  else console.log("[galaga] sprites OK (" + need.length + ")");
+})();
+
+/* ==================================================================
+   2. SOUND ENGINE
+================================================================== */
+/* =====================================================================
+   AUDIOPARAM FIX NOTE — THE CRASH YOU HIT
+   Reported: "Uncaught TypeError: Cannot set property Q of
+   #<BiquadFilterNode> which has only a getter" thrown from hiss().
+   CAUSE: BiquadFilterNode.Q is an AudioParam, not a number. The old code
+   did `bp.Q = q`, which is illegal in modern browsers (old WebKit
+   tolerated it, which is why the pattern is all over the internet).
+   FIX: the setParam() helper below writes through .value when the
+   property is an AudioParam and falls back to direct assignment on
+   legacy implementations. Same rule applies to frequency, gain, detune,
+   playbackRate: write `node.param.value = n`, never `node.param = n`.
+   Plain properties like .type and .buffer ARE directly assignable.
+   Every entry point is also try/wrapped so audio can never kill a frame.
+   ===================================================================== */
+const Sfx = {
+  ac:null, master:null, muted:false, dead:false, buffers:Object.create(null), beamNodes:null,
+
+  setParam(node, prop, value, time){
+    try{
+      const p = node[prop];
+      if(p && typeof p === "object" && "value" in p){
+        if(time !== undefined && p.setValueAtTime) p.setValueAtTime(value, time);
+        else p.value = value;
+      }else{
+        node[prop] = value;
+      }
+    }catch(e){}
+  },
+  ramp(param, value, time, type){
+    try{
+      const v = Math.max(0.0001, value);
+      if(type === "exp" && param.exponentialRampToValueAtTime) param.exponentialRampToValueAtTime(v, time);
+      else if(param.linearRampToValueAtTime) param.linearRampToValueAtTime(value, time);
+      else param.value = value;
+    }catch(e){}
+  },
+
+  init(){
+    if(this.ac || this.dead) return;
+    try{
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if(!AC){ this.dead = true; return; }
+      this.ac = new AC();
+      this.master = this.ac.createGain();
+      this.master.gain.value = .55;
+      this.master.connect(this.ac.destination);
+    }catch(e){
+      this.dead = true; this.ac = null;
+      console.warn("[galaga] audio disabled:", e.message);
+    }
+  },
+  resume(){ try{ if(this.ac && this.ac.state === "suspended") this.ac.resume(); }catch(e){} },
+  toggleMute(){
+    this.muted = !this.muted;
+    try{ if(this.master) this.master.gain.value = this.muted ? 0 : .55; }catch(e){}
+    if(this.muted) this.beam(false);
+  },
+
+  load(name, url){
+    this.init();
+    if(!this.ac) return Promise.resolve(false);
+    return fetch(url).then(r => r.arrayBuffer())
+      .then(b => new Promise(res => this.ac.decodeAudioData(b, d => res(d), () => res(null))))
+      .then(buf => { if(buf) this.buffers[name] = buf; return !!buf; })
+      .catch(() => false);
+  },
+
+  noiseBuffer(dur, shape){
+    const n = Math.max(1, Math.floor(this.ac.sampleRate * Math.max(0.01, dur)));
+    const b = this.ac.createBuffer(1, n, this.ac.sampleRate), d = b.getChannelData(0);
+    for(let i=0;i<n;i++){
+      const t = i/n;
+      d[i] = (Math.random()*2-1) * (shape === "tail" ? (1-t) : Math.pow(1-t, 2));
+    }
+    return b;
+  },
+
+  tone(f0, f1, dur, type, vol, delay = 0){
+    if(!this.ac || this.muted) return;
+    try{
+      const t = this.ac.currentTime + delay;
+      const o = this.ac.createOscillator(), g = this.ac.createGain();
+      o.type = type;
+      o.frequency.setValueAtTime(Math.max(20, f0), t);
+      if(f1 && f1 !== f0) this.ramp(o.frequency, Math.max(20, f1), t + dur, "exp");
+      g.gain.setValueAtTime(0.0001, t);
+      this.ramp(g.gain, Math.max(0.0002, vol), t + 0.008, "lin");
+      this.ramp(g.gain, 0.0001, t + dur, "exp");
+      o.connect(g); g.connect(this.master);
+      o.start(t); o.stop(t + dur + 0.03);
+    }catch(e){}
+  },
+
+  hiss(dur, vol, f0, f1, q = 1, delay = 0, shape = "burst"){
+    if(!this.ac || this.muted) return;
+    try{
+      const t = this.ac.currentTime + delay;
+      const s = this.ac.createBufferSource();
+      s.buffer = this.noiseBuffer(dur, shape);
+      const bp = this.ac.createBiquadFilter();
+      bp.type = "lowpass";
+      this.setParam(bp, "Q", q);                 /* <-- was `bp.Q = q` (crash) */
+      bp.frequency.setValueAtTime(Math.max(60, f0), t);
+      this.ramp(bp.frequency, Math.max(60, f1), t + dur, "exp");
+      const g = this.ac.createGain();
+      g.gain.setValueAtTime(Math.max(0.0002, vol), t);
+      this.ramp(g.gain, 0.0001, t + dur, "exp");
+      s.connect(bp); bp.connect(g); g.connect(this.master);
+      s.start(t);
+    }catch(e){}
+  },
+
+  play(name){
+    try{
+      this.init();
+      if(!this.ac || this.muted) return;
+      if(this.buffers[name]){
+        const s = this.ac.createBufferSource(), g = this.ac.createGain();
+        s.buffer = this.buffers[name]; g.gain.value = .8;
+        s.connect(g); g.connect(this.master); s.start();
+        return;
+      }
+      switch(name){
+        case "shoot":     this.tone(1500,420,.10,"square",.09); this.hiss(.05,.05,6000,1200); break;
+        case "shootDual": this.tone(1650,460,.10,"square",.075);
+                          this.tone(1400,400,.11,"square",.06,.012);
+                          this.hiss(.05,.05,6000,1200); break;
+        case "hitArmor":  this.tone(520,260,.07,"square",.07); this.hiss(.09,.07,3000,700,2); break;
+        case "boomEnemy": this.hiss(.34,.16,3400,180,1.2); this.tone(220,60,.28,"triangle",.07); break;
+        case "boomPlayer":this.hiss(.75,.22,2600,90,1.4);
+                          this.tone(180,40,.70,"sawtooth",.10);
+                          this.tone(90,30,.80,"sine",.12,.04); break;
+        case "dive":      this.tone(950,210,.38,"sawtooth",.055);
+                          this.tone(1420,315,.38,"square",.022,.01); break;
+        case "captured":  for(let i=0;i<6;i++) this.tone(900-i*120,700-i*120,.12,"square",.07,i*.10);
+                          this.tone(300,70,.9,"sawtooth",.07,.55); break;
+        case "freed":     [440,554,659,880].forEach((f,i)=>this.tone(f,f,.11,"square",.075,i*.075)); break;
+        case "dual":      [523,659,784,1046,1318].forEach((f,i)=>this.tone(f,f,.13,"square",.08,i*.085));
+                          this.hiss(.30,.05,8000,2000,1,.10,"tail"); break;
+        case "betray":    this.tone(420,90,.55,"sawtooth",.09); this.tone(210,45,.60,"square",.06,.05); break;
+        case "stage":     [392,523,659].forEach((f,i)=>this.tone(f,f,.16,"triangle",.09,i*.14)); break;
+        case "clear":     [659,784,988,1318].forEach((f,i)=>this.tone(f,f,.15,"triangle",.09,i*.12)); break;
+        case "extra":     this.tone(1046,1046,.10,"square",.09); this.tone(1568,1568,.14,"square",.09,.11); break;
+        case "gameover":  [523,466,392,311,262].forEach((f,i)=>this.tone(f,f*.98,.30,"triangle",.10,i*.24)); break;
+        case "pulseA":    this.tone(120,96,.13,"square",.045); break;
+        case "pulseB":    this.tone(96,76,.13,"square",.040); break;
+        case "start":     [262,330,392,523].forEach((f,i)=>this.tone(f,f,.12,"square",.08,i*.09)); break;
+
+        /* ---------------------------------------------------------------
+           PATCH 10 NOTE (part 2 of 9) — FOUR NEW CHEAT/SHIELD SOUNDS
+           cheatOk / cheatBad give audible confirmation that the typed
+           code registered; shieldHit is a metallic high-Q ping so an
+           absorbed hit never gets confused with taking damage; and
+           shieldDown warns you the ring is gone and the next hit is real.
+           --------------------------------------------------------------- */
+        case "cheatOk":   [523,659,784,1046].forEach((f,i)=>this.tone(f,f,.10,"square",.075,i*.06));
+                          this.tone(1568,2093,.22,"triangle",.06,.26);
+                          this.hiss(.35,.05,9000,2500,1,.12,"tail"); break;
+        case "cheatBad":  this.tone(300,120,.20,"square",.06);
+                          this.tone(200,80,.24,"sawtooth",.05,.06); break;
+        case "shieldHit": this.tone(1760,880,.13,"triangle",.075);
+                          this.tone(2640,1320,.10,"sine",.05,.01);
+                          this.hiss(.16,.09,7000,1800,6); break;
+        case "shieldDown":[784,622,466,349].forEach((f,i)=>this.tone(f,f*.97,.16,"sawtooth",.07,i*.09));
+                          this.hiss(.3,.08,1800,200,2,.05); break;
+      }
+    }catch(e){}
+  },
+
+  beam(on){
+    try{
+      this.init();
+      if(!this.ac) return;
+      if(on){
+        if(this.beamNodes || this.muted) return;
+        const t = this.ac.currentTime;
+        const car  = this.ac.createOscillator(), g  = this.ac.createGain();
+        const lfo  = this.ac.createOscillator(), lg = this.ac.createGain();
+        const trem = this.ac.createOscillator(), tg = this.ac.createGain();
+        car.type = "sine";
+        this.setParam(car, "frequency", 300);
+        this.setParam(lfo, "frequency", 9);   lg.gain.value = 110;
+        lfo.connect(lg); lg.connect(car.frequency);
+        this.setParam(trem, "frequency", 5.5); tg.gain.value = .028;
+        trem.connect(tg); tg.connect(g.gain);
+        g.gain.setValueAtTime(.001, t);
+        this.ramp(g.gain, .055, t + .12, "lin");
+        car.connect(g); g.connect(this.master);
+        car.start(t); lfo.start(t); trem.start(t);
+        this.beamNodes = { car, lfo, trem, g };
+      }else if(this.beamNodes){
+        const { car, lfo, trem, g } = this.beamNodes, t = this.ac.currentTime;
+        g.gain.cancelScheduledValues(t);
+        g.gain.setValueAtTime(Math.max(0.0002, g.gain.value), t);
+        this.ramp(g.gain, 0.0001, t + .14, "exp");
+        car.stop(t + .18); lfo.stop(t + .18); trem.stop(t + .18);
+        this.beamNodes = null;
+      }
+    }catch(e){ this.beamNodes = null; }
+  }
+};
+window.GalagaSfx = Sfx;
+
+/* ==================================================================
+   3. STATE
+================================================================== */
+const TYPES = [
+  { name:"boss",      pts:150,  hp:2, hw:13, hh:11, sets:[["bossG0","bossG1"],["bossB0","bossB1"]] },
+  { name:"butterfly", pts:80,   hp:1, hw:11, hh:10, sets:[["butter0","butter1"]] },
+  { name:"bee",       pts:50,   hp:1, hw:11, hh:10, sets:[["bee0","bee1"]] },
+  { name:"captive",   pts:1000, hp:1, hw:12, hh:12, sets:[["captive0","captive0"]] }
+];
+const CAPTIVE_TYPE = 3;
+const rowType = r => (r === 0 ? 0 : r === 1 ? 1 : 2);
+
+const game = {
+  state:"title", paused:false, debug:false, err:null,
+  time:0, timer:0, shake:0, fps:60,
+  score:0, lives:3, wave:1, nextExtra:20000,
+  high:+Store.get("galaga_high", 0) || 0,
+  player:null, capture:null, pendingDual:false,
+  captureCd:0, diveCd:0, pulseCd:0, pulseI:0,
+
+  /* PATCH 10 NOTE (part 3 of 9) — CHEAT STATE
+     cheat.shield  : is the c1 cheat currently armed? Survives across
+                     lives (each respawn re-grants a full shield) but is
+                     cleared by gameOver() and startGame(), which is what
+                     makes the code need re-entering after a game ends.
+     codeBuf/codeT : rolling keystroke buffer and its expiry timer, so a
+                     stale half-typed code cannot fire minutes later. */
+  cheat:{ shield:false },
+  codeBuf:"", codeT:0,
+
+  bullets:[], eBullets:[], enemies:[], booms:[], parts:[], stars:[], texts:[]
+};
+for(let i=0;i<95;i++)
+  game.stars.push({ x:Math.random()*W, y:Math.random()*H, s:rand(14,95),
+                    img:Math.random()<.6 ? S.star0 : (Math.random()<.8 ? S.star1 : S.star2),
+                    tw:rand(0,6.28) });
+
+/* =====================================================================
+   PATCH 2 NOTE — newPlayer()
+   WAS: ({ x:W/2, y:H-58, hw:9, hh:11, speed:275, cool:0, inv:2, dual, rot:0 })
+   The literal y:H-58 and single `speed` encoded the "one fixed row"
+   assumption that made capture impossible. Now spawns at PLAYER.baseY
+   and carries `thrust` (0..1) for the exhaust flame. Horizontal and
+   vertical speeds live in PLAYER, so nothing reads p.speed any more.
+
+   PATCH 10 NOTE (part 4 of 9): gained three shield fields.
+     shield     - charges remaining (0 = no ring, next hit costs a life)
+     shieldTop  - colour override for the TOP charge, used to paint a
+                  respawned shield blue while a freshly cheated one is
+                  green (see the spec-ambiguity note in SHIELD)
+     shieldHitT - 0..1 decaying flash used by drawShield() to punch the
+                  ring bright and wide for a moment after an absorb
+   ===================================================================== */
+const newPlayer = (dual=false, shield=0, top=null) => ({
+  x:W/2, y:PLAYER.baseY, hw:9, hh:11,
+  cool:0, inv:2, dual, rot:0, thrust:.6,
+  shield, shieldTop:top, shieldHitT:0
+});
+
+const shipOffsets = p => p.dual ? [-13, 13] : [0];
+const flash = (txt, life, color="#ffd24a") => game.texts.push({ txt, life, max:life, color });
+
+/* =====================================================================
+   PATCH 10 NOTE (part 5 of 9) — SHIELD HELPERS
+   shieldColor() maps charges remaining to a ramp colour, honouring the
+   per-life top-charge override. shieldAbsorb() is the single place a
+   charge is consumed: it flashes, sparks, plays a ping, and — critically
+   — sets p.inv = SHIELD.grace so one lingering collision cannot eat the
+   whole shield in a few frames. tryCheat() validates the typed buffer.
+   ===================================================================== */
+function shieldColor(p){
+  if(!p || p.shield <= 0) return null;
+  if(p.shield >= SHIELD.charges && SHIELD.respawnTop && p.shieldTop) return p.shieldTop;
+  return SHIELD.ramp[p.shield] || SHIELD.ramp[SHIELD.ramp.length-1];
+}
+function shieldAbsorb(p){
+  p.shield--;
+  p.shieldHitT = 1;
+  p.inv = SHIELD.grace;
+  game.shake = Math.max(game.shake, 4);
+  for(let i=0;i<14;i++){
+    const a = Math.random()*Math.PI*2, sp = rand(70,170);
+    game.parts.push({ x:p.x, y:p.y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp,
+                      life:rand(.18,.42), max:.42,
+                      img:SPARKS_COLD[(Math.random()*SPARKS_COLD.length)|0] });
+  }
+  if(p.shield > 0){
+    Sfx.play("shieldHit");
+    flash("SHIELD " + p.shield, .65, shieldColor(p) || "#9fc4ff");
+  }else{
+    Sfx.play("shieldDown");
+    flash("SHIELD DOWN", .95, "#ff9aa5");
+  }
+}
+function grantShield(p, top){
+  p.shield = SHIELD.charges;
+  p.shieldTop = top || null;
+  p.shieldHitT = 1;
+}
+/* Cheat entry is allowed in any live gameplay state, not just "playing",
+   so typing it while dying / between waves still works. Title and game
+   over are rejected, which is what forces re-entry after a game ends. */
+function cheatAllowed(){
+  return game.state === "playing" || game.state === "dying" ||
+         game.state === "wavebreak" || game.state === "captured";
+}
+function tryCheat(){
+  const buf = game.codeBuf;
+  game.codeBuf = ""; game.codeT = 0;
+  if(!buf.endsWith(SHIELD.code)) return;          // not our code: ignore silently
+  if(!cheatAllowed()){ Sfx.play("cheatBad"); return; }
+
+  const already = game.cheat.shield;
+  game.cheat.shield = true;
+  Sfx.play("cheatOk");
+
+  if(game.player){
+    /* Live ship: paint the top charge GREEN, per "first activated" spec. */
+    grantShield(game.player, null);
+    flash(already ? "SHIELD RECHARGED" : "SHIELD ONLINE", 1.5, SHIELD.ramp[SHIELD.charges]);
+  }else{
+    /* Typed while dead / mid-tow: arm it, the respawn below grants it. */
+    flash("SHIELD ARMED", 1.5, SHIELD.respawnTop || SHIELD.ramp[SHIELD.charges]);
+  }
+}
+
+function startGame(){
+  Sfx.init(); Sfx.resume(); Sfx.play("start");
+  game.state = "playing"; game.paused = false; game.err = null;
+  game.score = 0; game.lives = 3; game.wave = 1; game.nextExtra = 20000;
+  game.capture = null; game.pendingDual = false; game.shake = 0;
+  /* PATCH 10 NOTE (part 6 of 9): a NEW GAME always disarms the cheat, so
+     R-restart and the title screen both require re-entering c1 + ENTER. */
+  game.cheat.shield = false; game.codeBuf = ""; game.codeT = 0;
+  game.bullets.length = 0; game.eBullets.length = 0;
+  game.parts.length = 0; game.texts.length = 0; game.booms.length = 0;
+  game.player = newPlayer();
+  spawnWave(1);
+  flash("STAGE 1", 1.6);
+}
+function gameOver(){
+  game.state = "gameover"; Sfx.beam(false); Sfx.play("gameover");
+  /* PATCH 10: GAME OVER disarms the cheat — the powerup does not persist
+     into the next game, exactly as requested. */
+  game.cheat.shield = false; game.codeBuf = ""; game.codeT = 0;
+  game.high = Math.max(game.high, game.score);
+  Store.set("galaga_high", game.high);
+}
+function addScore(n){
+  game.score += n;
+  if(game.score >= game.nextExtra){
+    game.nextExtra += 30000; game.lives++;
+    Sfx.play("extra"); flash("EXTRA FIGHTER", 1.3, "#8dffd0");
+  }
+}
+function enemySprite(e){
+  const T = TYPES[e.type];
+  const set = T.sets[clamp(T.hp - e.hp, 0, T.sets.length-1)];
+  const f = Math.floor(game.time*7 + (e.gx || 0)*0.4) % 2;
+  return S[set[f]];
+}
+
+/* ==================================================================
+   4. INPUT
+================================================================== */
+const keys = Object.create(null);
+addEventListener("keydown", e => {
+  if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown","Space"].includes(e.code)) e.preventDefault();
+  keys[e.code] = true;
+  Sfx.init(); Sfx.resume();
+
+  /* =====================================================================
+     PATCH 10 NOTE (part 7 of 9) — CHEAT KEYSTROKE BUFFER
+     Accumulates letters and digits into game.codeBuf; ENTER submits it.
+     endsWith() is used rather than === so stray keys before the code do
+     not spoil it (e.g. "wasdc1" + ENTER still works). The buffer expires
+     after SHIELD.bufferTime seconds of no typing (ticked in update()),
+     is capped at 16 chars, and none of "c" / "1" collide with an
+     existing binding (M mute, P pause, R restart, ` debug, Z/J fire).
+     ENTER keeps its old title/gameover "start game" duty; tryCheat()
+     rejects those states itself.
+     ===================================================================== */
+  if(e.code === "Enter" || e.code === "NumpadEnter"){
+    tryCheat();
+  }else{
+    let ch = "";
+    if(/^Key[A-Z]$/.test(e.code))        ch = e.code.slice(3).toLowerCase();
+    else if(/^Digit[0-9]$/.test(e.code)) ch = e.code.slice(5);
+    else if(/^Numpad[0-9]$/.test(e.code))ch = e.code.slice(6);
+    if(ch){
+      game.codeBuf = (game.codeBuf + ch).slice(-16);
+      game.codeT = SHIELD.bufferTime;
+    }
+  }
+
+  if(e.code === "KeyM") Sfx.toggleMute();
+  if(e.code === "Backquote") game.debug = !game.debug;
+  if(e.code === "KeyP" && (game.state === "playing" || game.paused)) game.paused = !game.paused;
+  if(e.code === "KeyR") startGame();
+  if((e.code === "Space" || e.code === "Enter") && (game.state === "title" || game.state === "gameover")) startGame();
+}, { passive:false });
+addEventListener("keyup", e => { keys[e.code] = false; });
+
+/* =====================================================================
+   PATCH 3 NOTE — TOUCH INPUT GAINED A Y AXIS
+   The old handlers tracked only touchX, so mobile players were locked to
+   the bottom row exactly like keyboard players were, and could never
+   enter a shallow beam. tpos() now returns {x,y}; the movement code
+   targets (touchY - 44) so your fingertip does not cover the ship.
+   (The cheat is keyboard-only; there is no on-screen keypad.)
+   ===================================================================== */
+let touchX = null, touchY = null, touchFire = false;
+const tpos = e => {
+  const r = cvs.getBoundingClientRect(), t = e.touches[0];
+  return { x:(t.clientX - r.left)*(W/r.width), y:(t.clientY - r.top)*(H/r.height) };
+};
+cvs.addEventListener("touchstart", e => {
+  e.preventDefault(); Sfx.init(); Sfx.resume();
+  if(game.state === "title" || game.state === "gameover"){ startGame(); return; }
+  const q = tpos(e); touchX = q.x; touchY = q.y; touchFire = true;
+}, { passive:false });
+cvs.addEventListener("touchmove", e => {
+  e.preventDefault(); const q = tpos(e); touchX = q.x; touchY = q.y;
+}, { passive:false });
+cvs.addEventListener("touchend",  e => {
+  e.preventDefault(); touchFire = false; touchX = touchY = null;
+}, { passive:false });
+
+/* ==================================================================
+   5. WAVES / CAPTURE
+================================================================== */
+function spawnWave(n){
+  game.enemies.length = 0;
+  let i = 0;
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    const fromLeft = (r+c) % 2 === 0, type = rowType(r);
+    game.enemies.push({
+      kind:"alien", gx:c, gy:r, type, hp:TYPES[type].hp,
+      x: fromLeft ? -50 : W+50, y:H*.62,
+      state:"entering", t:-i*.07, dur:1.5,
+      p0:{ x: fromLeft ? -50 : W+50, y:H*.62 },
+      p1:{ x: fromLeft ? W*.9 : W*.1, y:-110 },
+      diveT:0, dir:1, shootCd:0, wobble:Math.random()*6.28,
+      canCapture:type === 0, captive:null, cap:null
+    });
+    i++;
+  }
+  game.diveCd = 2.2;
+  game.captureCd = Math.max(2.5, randR(CAP.firstDelay) - (n-1)*.5);
+  game.pulseCd = 0;
+}
+function formPos(e){
+  return { x:FORM_X0 + e.gx*COL_W + Math.sin(game.time*.85)*34,
+           y:FORM_Y0 + e.gy*ROW_H + Math.sin(game.time*.5 + e.gy*.4)*4 };
+}
+function bez(p0,p1,p2,t){
+  const u = 1-t;
+  return { x:u*u*p0.x + 2*u*t*p1.x + t*t*p2.x, y:u*u*p0.y + 2*u*t*p1.y + t*t*p2.y };
+}
+function boom(x, y, big, cold){
+  game.booms.push({ x, y, t:0, fps:big ? 16 : 20, frames:big ? S.boomP : S.boomE });
+  const pal = cold ? SPARKS_COLD : SPARKS_WARM, n = big ? 26 : 14;
+  for(let i=0;i<n;i++){
+    const a = Math.random()*Math.PI*2, sp = rand(40, big ? 260 : 190);
+    game.parts.push({ x, y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp,
+                      life:rand(.25,.6), max:.6, img:pal[(Math.random()*pal.length)|0] });
+  }
+}
+
+/* =====================================================================
+   PATCH 4 NOTE (part 1 of 2) — beamDrag() HELPER (NEW)
+   An open cone now physically tugs the fighter toward its centreline.
+   Purpose: make the beam feel like a tractor beam rather than a static
+   hitbox, and add tension when you are skimming its edge. Strength is
+   CAP.pull px/s scaled by how open the cone is; it only applies when you
+   are below the apex and within ~90px of the cone's reach.
+   ===================================================================== */
+function beamDrag(p, dt){
+  for(const e of game.enemies){
+    const c = e.cap;
+    if(e.state !== "capture" || !c || c.beam <= 0) continue;
+    if(p.y < e.y + 12) continue;
+    const reach = e.y + 12 + c.len*Math.min(1, c.beam*1.2);
+    if(p.y > reach + 90) continue;                   // too far below to feel it
+    const d = e.x - p.x;
+    if(Math.abs(d) > 1 && Math.abs(d) < CAP.beamHalfW*1.8)
+      p.x += Math.sign(d) * CAP.pull * c.beam * dt;
+  }
+}
+
+/* =====================================================================
+   PATCH 5 NOTE — startCaptureRun() NOW VARIES EVERY RUN
+   WAS: boss.cap = { phase:"approach", t:0, beam:0, hx:clamp(p.x,70,W-70) }
+   with the altitude read from a single global CAP.hoverY — so every
+   capture attempt was visually and mechanically identical, and always
+   too shallow to reach you.
+   NOW: picks one of CAP.runs at random, never the same archetype twice
+   in a row (lastRun), and blends a random screen position with your
+   current x by that run's `aim`, so some runs stalk you and others
+   stake out a spot and dare you to enter. Per-run hoverY / len / sweep /
+   aim are copied into boss.cap for the state machine in PATCH 6.
+   ===================================================================== */
+let lastRun = -1;
+function startCaptureRun(){
+  const p = game.player;
+  if(!p || game.state !== "playing" || game.wave < CAP.minWave) return;
+  if(game.enemies.some(e => e.state === "capture")) return;
+  const bosses = game.enemies.filter(e => e.kind === "alien" && e.canCapture &&
+                                          e.state === "formation" && !e.captive);
+  if(!bosses.length) return;
+  const boss = bosses[(Math.random()*bosses.length)|0];
+
+  let idx = (Math.random()*CAP.runs.length)|0;
+  if(CAP.runs.length > 1 && idx === lastRun)
+    idx = (idx + 1 + ((Math.random()*(CAP.runs.length-1))|0)) % CAP.runs.length;
+  lastRun = idx;
+  const R = CAP.runs[idx];
+
+  const roam = rand(70, W-70);
+  const hx = roam + (clamp(p.x, 70, W-70) - roam) * R.aim;
+
+  boss.state = "capture";
+  boss.cap = { phase:"approach", t:0, beam:0, hx,
+               hoverY:H*R.hoverY, len:R.len, sweep:R.sweep, aim:R.aim, name:R.name };
+
+  const bees = game.enemies.filter(e => e.type === 2 && e.state === "formation");
+  for(let i=0;i<Math.min(2, bees.length);i++){
+    const b = bees.splice((Math.random()*bees.length)|0, 1)[0];
+    b.state = "diving"; b.diveT = 0; b.shootCd = rand(.3,.9);
+    b.dir = Math.sign(p.x - b.x) || 1;
+  }
+  Sfx.play("dive");
+}
+
+/* =====================================================================
+   PATCH 7 NOTE (part 1 of 2) — inBeam() USES PER-RUN LENGTH
+   WAS: `const len = CAP.beamLen * ...` — one global length for all runs,
+   which is exactly why the hit test always fell 20px short of the ship.
+   NOW reads c.len from the active run, so the hitbox matches whatever
+   cone drawBeam() is actually drawing. Also bails safely if cap is gone.
+   ===================================================================== */
+function inBeam(e, px, py){
+  const c = e.cap;
+  if(!c || c.beam <= 0) return false;
+  const apex = e.y + 12, len = c.len * Math.min(1, c.beam*1.2);
+  if(py < apex || len <= 0) return false;
+  const t = (py - apex)/len;
+  if(t > 1) return false;
+  return Math.abs(px - e.x) < 8 + (CAP.beamHalfW*c.beam - 8)*t;
+}
+
+function beginCapture(boss){
+  const p = game.player;
+  game.state = "captured"; game.timer = CAP.pullTime;
+  game.capture = { boss, sx:p.x, sy:p.y };
+  game.eBullets.length = 0;
+  boss.cap.phase = "tow";
+  Sfx.play("captured");
+}
+function finishCapture(){
+  const boss = game.capture && game.capture.boss;
+  if(boss && game.enemies.indexOf(boss) >= 0){
+    boss.captive = { kind:"captive", type:CAPTIVE_TYPE, hp:1, x:boss.x, y:boss.y + CAP.captiveOff,
+                     state:"docked", boss, rot:Math.PI, diveT:0, dir:1,
+                     shootCd:rand(.4,1), wobble:Math.random()*6.28 };
+    game.enemies.push(boss.captive);
+    boss.state = "returning"; boss.cap = null;
+  }
+  game.capture = null; game.player = null;
+  Sfx.beam(false);
+  game.lives--;
+  flash("FIGHTER CAPTURED", 1.6, "#ff9aa5");
+  if(game.lives <= 0) gameOver();
+  else { game.state = "dying"; game.timer = 1.1; }
+}
+function cancelCapture(){
+  const p = game.player;
+  if(p){ p.rot = 0; p.y = PLAYER.baseY; p.inv = 2; }   /* baseY, not H-58 (PATCH 1) */
+  game.capture = null; Sfx.beam(false);
+  game.state = "playing";
+  Sfx.play("freed"); flash("ESCAPED", 1.2, "#8dff9e");
+}
+function releaseCaptive(boss){
+  const cap = boss.captive; if(!cap) return;
+  boss.captive = null; cap.boss = null;
+  if(boss.state !== "formation" && boss.state !== "entering"){
+    cap.state = "freed"; Sfx.play("freed"); flash("FIGHTER FREED", 1.4, "#7fd4ff");
+  }else{
+    cap.state = "hostile"; cap.diveT = 0; cap.rot = Math.PI;
+    cap.dir = game.player ? (Math.sign(game.player.x - cap.x) || 1) : 1;
+    Sfx.play("betray"); flash("FIGHTER TURNED", 1.3, "#ff4d5a");
+  }
+}
+function dockRescued(cap){
+  const i = game.enemies.indexOf(cap);
+  if(i >= 0) game.enemies.splice(i, 1);
+  if(game.player){
+    game.player.dual = true;
+    boom(game.player.x, game.player.y - 6, false, true);
+    Sfx.play("dual"); flash("DUAL FIGHTER", 1.5, "#8dffd0");
+  }else game.pendingDual = true;
+}
+
+/* ==================================================================
+   6. UPDATE
+================================================================== */
+function update(dt){
+  game.time += dt;
+  game.shake = Math.max(0, game.shake - dt*22);
+
+  /* PATCH 10: expire a partially typed cheat so it cannot fire later. */
+  if(game.codeT > 0){
+    game.codeT -= dt;
+    if(game.codeT <= 0) game.codeBuf = "";
+  }
+
+  for(const s of game.stars){ s.y += s.s*dt; if(s.y > H){ s.y = -2; s.x = Math.random()*W; } }
+  for(let i=game.parts.length-1;i>=0;i--){
+    const q = game.parts[i];
+    q.x += q.vx*dt; q.y += q.vy*dt; q.vy += 90*dt; q.life -= dt;
+    if(q.life <= 0) game.parts.splice(i,1);
+  }
+  for(let i=game.booms.length-1;i>=0;i--){
+    const b = game.booms[i]; b.t += dt;
+    if(!b.frames || b.t*b.fps >= b.frames.length) game.booms.splice(i,1);
+  }
+  for(let i=game.texts.length-1;i>=0;i--){
+    game.texts[i].life -= dt;
+    if(game.texts[i].life <= 0) game.texts.splice(i,1);
+  }
+  if(game.state === "title" || game.state === "gameover"){ Sfx.beam(false); return; }
+
+  if(game.state === "dying"){
+    game.timer -= dt;
+    if(game.timer <= 0){
+      /* PATCH 10 NOTE (part 8 of 9) — RESPAWN RE-GRANTS THE SHIELD
+         While game.cheat.shield is armed, every new life starts with a
+         full shield, and its top charge is painted SHIELD.respawnTop
+         (blue) to match the "next life starts over with the blue shield"
+         half of the request. Set respawnTop:null for green respawns. */
+      const sh = game.cheat.shield ? SHIELD.charges : 0;
+      game.player = newPlayer(game.pendingDual, sh, sh ? SHIELD.respawnTop : null);
+      game.pendingDual = false; game.state = "playing";
+      if(sh) flash("SHIELD ONLINE", 1.1, SHIELD.respawnTop || SHIELD.ramp[sh]);
+    }
+  }
+  if(game.state === "wavebreak"){
+    game.timer -= dt;
+    if(game.timer <= 0){
+      game.wave++; spawnWave(game.wave);
+      Sfx.play("stage"); flash("STAGE " + game.wave, 1.5);
+      game.state = "playing";
+    }
+  }
+  if(game.state === "captured"){
+    game.timer -= dt;
+    const c = game.capture, p0 = game.player;
+    if(c && p0 && c.boss){
+      const k = 1 - clamp(game.timer/CAP.pullTime, 0, 1);
+      p0.rot += dt*(6 + 10*k); p0.dual = false;
+      p0.x = c.sx + (c.boss.x - c.sx)*k;
+      p0.y = c.sy + (c.boss.y + 26 - c.sy)*k;
+    }
+    if(game.timer <= 0){ finishCapture(); return; }
+  }
+
+  const p = game.player;
+
+  /* PATCH 10: decay the ring's hit-flash. */
+  if(p && p.shieldHitT > 0) p.shieldHitT = Math.max(0, p.shieldHitT - dt*3);
+
+  /* =====================================================================
+     PATCH 4 NOTE (part 2 of 2) — PLAYER MOVEMENT REWRITTEN
+     WAS: horizontal only. `p.x = clamp(p.x + dx*p.speed*dt, m, W-m)` and
+     nothing ever wrote p.y, so the ship was welded to y=582 and could not
+     climb into a shallow tractor beam.
+     NOW:
+       * ↑/W and ↓/S (and vertical touch) move within PLAYER.yMin..yMax
+       * diagonals are scaled 0.8 so you get no free speed
+       * PLAYER.recenter optionally glides you back to baseY on release
+       * beamDrag() applies the cone's sideways tug, then x is re-clamped
+       * p.thrust drives the exhaust flame in render()
+     !! BREAKING CHANGE !! ArrowUp / KeyW were previously alternate FIRE
+     keys. They are thrust now. Fire = SPACE / Z / J.
+     ===================================================================== */
+  if(p && game.state === "playing"){
+    let dx = 0, dy = 0;
+    if(keys.ArrowLeft  || keys.KeyA) dx -= 1;
+    if(keys.ArrowRight || keys.KeyD) dx += 1;
+    if(keys.ArrowUp    || keys.KeyW) dy -= 1;
+    if(keys.ArrowDown  || keys.KeyS) dy += 1;
+    if(touchX !== null){
+      const ddx = touchX - p.x;              dx = Math.abs(ddx) > 3 ? Math.sign(ddx) : 0;
+      const ddy = (touchY - 44) - p.y;       dy = Math.abs(ddy) > 6 ? Math.sign(ddy) : 0;
+    }
+    if(dx && dy){ dx *= .8; dy *= .8; }
+
+    const m = p.dual ? 30 : 18;
+    p.x = clamp(p.x + dx*PLAYER.speedX*dt, m, W-m);
+    p.y = clamp(p.y + dy*PLAYER.speedY*dt, PLAYER.yMin, PLAYER.yMax);
+    if(!dy && PLAYER.recenter)
+      p.y += clamp(PLAYER.baseY - p.y, -PLAYER.recenter*dt, PLAYER.recenter*dt);
+
+    beamDrag(p, dt);
+    p.x = clamp(p.x, m, W-m);
+    p.thrust = dy < 0 ? 1 : (dy > 0 ? .25 : .6);
+
+    p.cool -= dt; p.inv -= dt;
+    const fire = keys.Space || keys.KeyZ || keys.KeyJ || touchFire;
+    if(fire && p.cool <= 0 && game.bullets.length < (p.dual ? 4 : 2)){
+      for(const off of shipOffsets(p)) game.bullets.push({ x:p.x+off, y:p.y-16, vy:-640 });
+      p.cool = .2;
+      Sfx.play(p.dual ? "shootDual" : "shoot");
+    }
+  }
+
+  for(let i=game.bullets.length-1;i>=0;i--){
+    const b = game.bullets[i]; b.y += b.vy*dt;
+    if(b.y < -14) game.bullets.splice(i,1);
+  }
+  for(let i=game.eBullets.length-1;i>=0;i--){
+    const b = game.eBullets[i]; b.x += b.vx*dt; b.y += b.vy*dt;
+    if(b.y > H+14 || b.x < -14 || b.x > W+14) game.eBullets.splice(i,1);
+  }
+
+  const inForm = [];
+  let beamActive = false;
+
+  for(const e of game.enemies){
+    if(e.kind === "captive"){
+      if(e.state === "docked"){
+        if(e.boss){
+          const k = Math.min(1, dt*10);
+          e.x += (e.boss.x - e.x)*k;
+          e.y += (e.boss.y + CAP.captiveOff - e.y)*k;
+          e.rot = Math.PI + Math.sin(game.time*3)*.08;
+        }
+      }else if(e.state === "freed"){
+        e.rot += (0 - e.rot)*Math.min(1, dt*5);
+        const tx = p ? p.x : W/2, ty = p ? p.y - 2 : PLAYER.baseY - 2;
+        const dx = tx-e.x, dy = ty-e.y, d = Math.hypot(dx,dy) || 1;
+        e.x += (dx/d)*230*dt; e.y += (dy/d)*230*dt;
+        if(p && d < 24){ dockRescued(e); }
+      }else if(e.state === "hostile"){
+        e.diveT += dt;
+        e.rot = Math.PI + Math.sin(e.diveT*3)*.3;
+        e.y += (210 + game.wave*10)*dt;
+        e.x = clamp(e.x + (Math.sin(e.diveT*4 + e.wobble)*200 + e.dir*60)*dt, 14, W-14);
+        e.shootCd -= dt;
+        if(e.shootCd <= 0 && e.y < H*.85){
+          game.eBullets.push({ x:e.x, y:e.y+12, vx:p ? clamp((p.x-e.x)*.6,-260,260) : 0, vy:270 });
+          e.shootCd = rand(.5,1.1);
+        }
+        if(e.y > H+36){ e.y = -40; e.x = rand(40,W-40); e.diveT = 0;
+                        e.dir = p ? (Math.sign(p.x-e.x) || 1) : 1; }
+      }
+      continue;
+    }
+
+    switch(e.state){
+      case "entering":
+        e.t += dt/e.dur;
+        if(e.t >= 1) e.state = "formation";
+        else if(e.t > 0){ const q = bez(e.p0, e.p1, formPos(e), e.t); e.x = q.x; e.y = q.y; }
+        break;
+      case "formation": {
+        const t = formPos(e); e.x = t.x; e.y = t.y; inForm.push(e);
+        break;
+      }
+
+      /* =====================================================================
+         PATCH 6 NOTE — CAPTURE STATE MACHINE: TELEGRAPH + DESCENT
+         WAS: approach -> open -> hold -> close, at a fixed altitude, with
+         re-aim hardcoded to dt*1.6 and no descent. Nothing about it could
+         reach the player.
+         NOW:
+           * new "charge" phase (CAP.telegraph = 0.45s) hums and draws a
+             dashed targeting line BEFORE the cone opens, so a full-depth
+             run is a readable threat rather than a cheap shot
+           * open/hold merged into one branch that also applies c.sweep,
+             letting a run descend (capped at CAP.maxHoverY)
+           * re-aim strength scales with the run's `aim` factor
+           * capture only triggers once c.beam > .30, so the very first
+             frames of a growing cone are not instant death
+
+         PATCH 10: the SHIELD.blocksCapture branch lives here. Default
+         false, so the beam still takes you through a live shield — if it
+         absorbed instead, capture would be impossible while cheating and
+         so would the dual fighter, since capture is its only source.
+         ===================================================================== */
+      case "capture": {
+        const c = e.cap;
+        if(!c){ e.state = "returning"; break; }
+        c.t += dt;
+
+        if(p) c.hx += (clamp(p.x, 60, W-60) - c.hx) * Math.min(1, dt*2.2*c.aim);
+        c.hx = clamp(c.hx, 60, W-60);
+
+        if(c.phase === "approach"){
+          const dx = c.hx - e.x, dy = c.hoverY - e.y, d = Math.hypot(dx,dy) || 1;
+          e.x += (dx/d)*CAP.approachSpd*dt;
+          e.y += (dy/d)*CAP.approachSpd*dt;
+          if(d < 8){ c.phase = "charge"; c.t = 0; }
+
+        }else if(c.phase === "charge"){
+          e.x += (c.hx - e.x) * Math.min(1, dt*3);
+          beamActive = true;
+          if(c.t >= CAP.telegraph){ c.phase = "open"; c.t = 0; }
+
+        }else if(c.phase === "open" || c.phase === "hold"){
+          e.x += (c.hx - e.x) * Math.min(1, dt*1.6);
+          e.y = Math.min(e.y + c.sweep*dt, CAP.maxHoverY);
+          beamActive = true;
+          if(c.phase === "open"){
+            c.beam = clamp(c.t/CAP.beamOpen, 0, 1);
+            if(c.t >= CAP.beamOpen){ c.phase = "hold"; c.t = 0; }
+          }else{
+            c.beam = 1;
+            if(c.t >= CAP.beamHold){ c.phase = "close"; c.t = 0; }
+          }
+          if(p && game.state === "playing" && p.inv <= 0 && c.beam > .30){
+            for(const off of shipOffsets(p))
+              if(inBeam(e, p.x + off, p.y)){
+                if(SHIELD.blocksCapture && p.shield > 0) shieldAbsorb(p);
+                else beginCapture(e);
+                break;
+              }
+          }
+
+        }else if(c.phase === "close"){
+          c.beam = clamp(1 - c.t/CAP.beamClose, 0, 1);
+          if(c.beam > 0) beamActive = true;
+          if(c.t >= CAP.beamClose){ e.state = "returning"; e.cap = null; }
+
+        }else{ c.beam = 1; beamActive = true; }   /* "tow" */
+        break;
+      }
+
+      case "diving":
+        e.diveT += dt;
+        /* =====================================================================
+           PATCH 8 NOTE — DIVERS NOW CONVERGE ON YOU
+           The other half of the "they're no threat" complaint: escorts flew
+           a fixed sine wobble from wherever they happened to leave the
+           formation and usually washed past on one side. This adds gentle
+           homing — 55%/s toward your x, correction capped at 70px so they
+           still arc rather than snapping onto you.
+           ===================================================================== */
+        if(p) e.x += clamp(p.x - e.x, -70, 70) * 0.55 * dt;
+        e.y += (190 + game.wave*14)*dt;
+        e.x = clamp(e.x + (Math.sin(e.diveT*3.6 + e.wobble)*190 + e.dir*55)*dt, 14, W-14);
+        e.shootCd -= dt;
+        if(e.shootCd <= 0 && e.y < H*.85){
+          const a = Math.atan2(1, p ? (p.x-e.x)/260 : 0);
+          game.eBullets.push({ x:e.x, y:e.y+12, vx:Math.cos(a)*250, vy:Math.sin(a)*250 });
+          e.shootCd = rand(.6,1.4);
+        }
+        if(e.y > H+36){ e.state = "returning"; e.y = -40; e.x = rand(40,W-40); }
+        break;
+      case "returning": {
+        const t = formPos(e), dx = t.x-e.x, dy = t.y-e.y, d = Math.hypot(dx,dy) || 1;
+        e.x += (dx/d)*260*dt; e.y += (dy/d)*260*dt;
+        if(d < 6) e.state = "formation";
+        break;
+      }
+    }
+  }
+  Sfx.beam(beamActive);
+
+  if(game.state === "playing" && inForm.length){
+    game.diveCd -= dt;
+    if(game.diveCd <= 0){
+      const e = inForm[(Math.random()*inForm.length)|0];
+      e.state = "diving"; e.diveT = 0; e.shootCd = rand(.2,.6);
+      e.dir = p ? (Math.sign(p.x-e.x) || 1) : 1;
+      game.diveCd = Math.max(.45, rand(1.5,2.6) - game.wave*.12);
+      Sfx.play("dive");
+    }
+    game.captureCd -= dt;
+    if(game.captureCd <= 0){
+      startCaptureRun();
+      game.captureCd = Math.max(4, randR(CAP.repeatDelay) - game.wave*.4);
+    }
+    game.pulseCd -= dt;
+    if(game.pulseCd <= 0){
+      game.pulseCd = .16 + .34*(game.enemies.length/(COLS*ROWS));
+      Sfx.play((game.pulseI++ % 2) ? "pulseB" : "pulseA");
+    }
+  }
+
+  /* player shots vs enemies */
+  for(let i=game.bullets.length-1;i>=0;i--){
+    const b = game.bullets[i];
+    for(let j=game.enemies.length-1;j>=0;j--){
+      const e = game.enemies[j], T = TYPES[e.type];
+      if(e.state === "entering" && e.t <= 0) continue;
+      if(e.kind === "captive" && e.state === "freed" && !CAP.friendlyFire) continue;
+      if(Math.abs(b.x-e.x) < T.hw && Math.abs(b.y-e.y) < T.hh + 4){
+        game.bullets.splice(i,1);
+        if(--e.hp > 0){ Sfx.play("hitArmor"); }
+        else{
+          const hot = e.state === "diving" || e.state === "capture" || e.state === "hostile";
+          addScore(T.pts * (e.kind === "captive" ? 1 : (hot ? 2 : 1)));
+          boom(e.x, e.y, e.kind === "captive", e.kind === "captive");
+          Sfx.play("boomEnemy");
+          game.shake = Math.min(6, game.shake + 2);
+          if(e.kind === "captive" && e.boss) e.boss.captive = null;
+          if(e.captive) releaseCaptive(e);
+          /* HARDENING NOTE (F): splice the boss out BEFORE cancelCapture()
+             so the tow cannot reference a half-removed entity. */
+          const towing = game.capture && game.capture.boss === e;
+          game.enemies.splice(j,1);
+          if(towing) cancelCapture();
+        }
+        break;
+      }
+    }
+  }
+
+  /* hazards vs player */
+  if(p && game.state === "playing" && p.inv <= 0){
+    const offs = shipOffsets(p);
+    let hitOff = null;
+    for(let i=game.eBullets.length-1;i>=0 && hitOff===null;i--){
+      const b = game.eBullets[i];
+      for(const off of offs)
+        if(Math.abs(b.x-(p.x+off)) < p.hw+3 && Math.abs(b.y-p.y) < p.hh+3){
+          game.eBullets.splice(i,1); hitOff = off; break;
+        }
+    }
+    if(hitOff === null)
+      for(const e of game.enemies){
+        if(!(e.state === "diving" || e.state === "hostile" || e.state === "capture")) continue;
+        const T = TYPES[e.type];
+        for(const off of offs)
+          if(Math.abs(e.x-(p.x+off)) < T.hw + p.hw - 6 && Math.abs(e.y-p.y) < T.hh + p.hh - 6){
+            hitOff = off; break;
+          }
+        if(hitOff !== null) break;
+      }
+
+    /* =====================================================================
+       PATCH 10 NOTE (part 9 of 9) — DAMAGE PRECEDENCE WITH THE SHIELD
+       WAS: if(p.dual) lose wingman; else lose a life.
+       NOW a three-way ladder, ordered by SHIELD.protectsWingman:
+         protectsWingman TRUE  (default): shield -> wingman -> life
+         protectsWingman FALSE:           wingman -> shield -> life
+       With the default and a single fighter this is exactly the requested
+       4-hits-per-life. While dual it becomes 5 (3 shield + wingman +
+       life), which is the natural consequence of stacking both powerups.
+       Note shieldAbsorb() sets p.inv = SHIELD.grace, so the very next
+       frames cannot drain another charge from the same collision.
+       ===================================================================== */
+    if(hitOff !== null){
+      if(p.dual && !SHIELD.protectsWingman){
+        boom(p.x+hitOff, p.y, false, true);
+        Sfx.play("boomEnemy");
+        p.dual = false; p.inv = 1.6; game.shake = 5;
+        p.x = clamp(p.x + (hitOff > 0 ? -13 : 13), 18, W-18);
+        flash("WINGMAN LOST", 1.1, "#ff9aa5");
+      }else if(p.shield > 0){
+        shieldAbsorb(p);
+      }else if(p.dual){
+        boom(p.x+hitOff, p.y, false, true);
+        Sfx.play("boomEnemy");
+        p.dual = false; p.inv = 1.6; game.shake = 5;
+        p.x = clamp(p.x + (hitOff > 0 ? -13 : 13), 18, W-18);
+        flash("WINGMAN LOST", 1.1, "#ff9aa5");
+      }else{
+        boom(p.x, p.y, true, true);
+        Sfx.play("boomPlayer");
+        game.shake = 12;
+        game.lives--; game.player = null; game.eBullets.length = 0;
+        if(game.lives <= 0) gameOver();
+        else { game.state = "dying"; game.timer = 1.4; }
+      }
+    }
+  }
+
+  if(game.state === "playing"){
+    let threats = 0;
+    for(const e of game.enemies) if(!(e.kind === "captive" && e.state === "freed")) threats++;
+    if(threats === 0){
+      game.state = "wavebreak"; game.timer = 1.8;
+      addScore(300); Sfx.beam(false); Sfx.play("clear");
+      flash("STAGE CLEAR +300", 1.7, "#8dff9e");
+    }
+  }
+}
+
+/* ==================================================================
+   7. RENDER
+================================================================== */
+/* =====================================================================
+   PATCH 7 NOTE (part 2 of 2) — drawBeam() TELEGRAPH + PER-RUN GEOMETRY
+   Three changes:
+     1) "charge" phase draws a flashing dashed line down the full length
+        the cone WILL reach, so you can read the threat and dodge/bait it
+     2) cone height is c.len (per-run), achieved by stretching the baked
+        sprite, so runs may be longer than the baked canvas
+     3) a bright 2px bar marks the tip, making reach unambiguous — this is
+        what makes the shallow "high" run legible as escapable
+   ===================================================================== */
+function drawBeam(e){
+  const c = e.cap; if(!c) return;
+
+  if(c.phase === "charge"){
+    const k = clamp(c.t/CAP.telegraph, 0, 1);
+    ctx.save();
+    ctx.globalAlpha = (.22 + .38*Math.abs(Math.sin(game.time*22))) * k;
+    ctx.strokeStyle = "#8dffd0"; ctx.lineWidth = 2;
+    ctx.setLineDash([6,10]);
+    ctx.beginPath(); ctx.moveTo(e.x, e.y+12); ctx.lineTo(e.x, e.y+12 + c.len); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+    return;
+  }
+
+  const a = c.beam;
+  if(a <= 0 || !S.beam) return;
+  const img = S.beam[Math.floor(game.time*11) % S.beam.length];
+  const len = c.len * Math.min(1, a*1.2), w = CAP.beamHalfW*2*a;
+  ctx.save();
+  ctx.globalAlpha = .55 + .45*a;
+  ctx.drawImage(img, e.x - w/2, e.y + 12, w, len);
+  ctx.globalAlpha = .55*a;
+  ctx.fillStyle = "#d8fff2";
+  ctx.fillRect(e.x - w/2, e.y + 12 + len - 2, w, 2);
+  ctx.restore();
+}
+
+/* =====================================================================
+   PATCH 10 — drawShield() (NEW)
+   A flickering ring per hull, colour-coded to charges remaining. The
+   flicker is three stacked effects so it reads as unstable energy rather
+   than a plain circle:
+     * fast alpha wobble at ~30Hz plus a slower radius breathe
+     * a rotating dashed inner ring (lineDashOffset scrolls with time)
+     * shieldHitT punches alpha and radius up for ~0.3s after an absorb
+   Hidden during the capture tow (p.rot != 0 / state "captured") because
+   the ship is spinning inside the enemy beam and the ring only adds
+   visual noise there.
+   ===================================================================== */
+function drawShield(p){
+  if(!p || p.shield <= 0 || game.state === "captured" || p.rot) return;
+  const col = shieldColor(p);
+  if(!col) return;
+
+  const hit  = clamp(p.shieldHitT, 0, 1);
+  const puls = .58 + .42*Math.sin(game.time*30 + p.shield*1.7);
+  const a    = clamp(puls*.72 + hit*.85, 0, 1);
+  const r    = (p.dual ? SHIELD.radiusDual : SHIELD.radius)
+             + Math.sin(game.time*17)*1.8 + hit*8;
+
+  ctx.save();
+  ctx.strokeStyle = col;
+  ctx.shadowColor = col;
+  ctx.shadowBlur = 8 + hit*12;
+
+  for(const off of shipOffsets(p)){
+    ctx.globalAlpha = a;
+    ctx.lineWidth = 2 + hit*1.5;
+    ctx.beginPath(); ctx.arc(p.x + off, p.y, r, 0, Math.PI*2); ctx.stroke();
+
+    ctx.globalAlpha = a*.45;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([5,7]);
+    ctx.lineDashOffset = -game.time*46;
+    ctx.beginPath(); ctx.arc(p.x + off, p.y, r - 4, 0, Math.PI*2); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  ctx.restore();
+}
+
+function render(){
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = "#04050b"; ctx.fillRect(0,0,W,H);
+  if(game.shake > .2)
+    ctx.translate(Math.round(rand(-game.shake, game.shake)), Math.round(rand(-game.shake, game.shake)));
+
+  for(const s of game.stars){
+    ctx.globalAlpha = .35 + .65*Math.abs(Math.sin(game.time*2.2 + s.tw));
+    ctx.drawImage(s.img, Math.round(s.x), Math.round(s.y));
+  }
+  ctx.globalAlpha = 1;
+
+  for(const e of game.enemies) if(e.state === "capture") drawBeam(e);
+
+  for(const e of game.enemies){
+    if(e.state === "entering" && e.t <= 0) continue;
+    if(e.kind === "captive"){
+      if(e.state === "docked" && e.boss){
+        ctx.strokeStyle = "rgba(141,255,208,.45)"; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(e.x, e.y+10); ctx.lineTo(e.boss.x, e.boss.y-10); ctx.stroke();
+      }
+      blit(S.captive0, e.x, e.y, e.rot);
+    }else{
+      blit(enemySprite(e), e.x, e.y, e.state === "diving" ? Math.sin(e.diveT*3.6 + e.wobble)*.35 : 0);
+    }
+  }
+
+  for(const b of game.bullets)  blit(S.pshot, b.x, b.y);
+  for(const b of game.eBullets) blit(S.eshot, b.x, b.y);
+
+  /* =====================================================================
+     PATCH 9 NOTE (part 3 of 3) — PLAYER DRAW GAINED AN EXHAUST
+     Alternates flameA/flameB at 24Hz below each hull, scaled and faded by
+     p.thrust (1.0 climbing, 0.6 coasting, 0.25 descending → hidden).
+     Suppressed while p.rot is non-zero, i.e. during the capture tow spin.
+
+     PATCH 10: the shield ring is drawn AFTER the hull so it reads as a
+     bubble in front of the ship, and it is drawn OUTSIDE the invuln
+     blink test so the ring stays solid while the ship itself flickers.
+     ===================================================================== */
+  const p = game.player;
+  if(p && (game.state === "captured" || p.inv <= 0 || Math.floor(game.time*14) % 2)){
+    const img = (Math.floor(game.time*20) % 2) ? S.fighter0 : S.fighter1;
+    const fl  = (Math.floor(game.time*24) % 2) ? S.flameA   : S.flameB;
+    for(const off of shipOffsets(p)){
+      blit(img, p.x + off, p.y, p.rot);
+      if(!p.rot && p.thrust > .5)
+        blit(fl, p.x + off, p.y + 16, 0, p.thrust, p.thrust);
+    }
+  }
+  drawShield(p);
+
+  for(const b of game.booms){
+    const f = Math.min(b.frames.length-1, Math.floor(b.t*b.fps));
+    blit(b.frames[f], b.x, b.y);
+  }
+  for(const q of game.parts){
+    ctx.globalAlpha = clamp(q.life/q.max, 0, 1);
+    ctx.drawImage(q.img, Math.round(q.x), Math.round(q.y));
+  }
+  ctx.globalAlpha = 1;
+
+  drawText("SCORE " + String(game.score).padStart(6,"0"), 10, 10, 2, "#9fc4ff");
+  drawText("HI " + String(Math.max(game.high, game.score)).padStart(6,"0"), W-10, 10, 2, "#ff9aa5", "right");
+  drawText("STAGE " + game.wave, W/2, 10, 2, "#8dff9e", "center");
+  for(let i=0;i<Math.min(game.lives, 8);i++) blit(S.fighter0, 20 + i*24, H-16, 0, .75);
+  if(p && p.dual) drawText("DUAL FIGHTER", W-10, H-22, 2, "#8dffd0", "right");
+  if(Sfx.muted) drawText("MUTED", W/2, H-22, 2, "#5b7398", "center");
+
+  /* PATCH 10: HUD readout — pips show charges left, and an "ARMED" note
+     appears if the cheat is on but the current ship has no charges (i.e.
+     you are out of shield until the next life). */
+  if(game.cheat.shield){
+    const n = p ? p.shield : 0;
+    drawText("SHIELD", 10, H-40, 2, n > 0 ? (shieldColor(p) || "#9fc4ff") : "#5b7398");
+    for(let i=0;i<SHIELD.charges;i++){
+      const on = i < n;
+      ctx.globalAlpha = on ? (.65 + .35*Math.sin(game.time*12 + i)) : .22;
+      ctx.fillStyle = on ? (SHIELD.ramp[i+1] || "#9fc4ff") : "#33465e";
+      ctx.fillRect(84 + i*12, H-38, 8, 10);
+    }
+    ctx.globalAlpha = 1;
+    if(!p || p.shield <= 0) drawText("ARMED", 124, H-40, 2, "#5b7398");
+  }
+
+  for(const t of game.texts){
+    ctx.globalAlpha = clamp(t.life/t.max*1.6, 0, 1);
+    drawText(t.txt, W/2, H/2 - 40, 3, t.color, "center", true);
+    ctx.globalAlpha = 1;
+  }
+
+  if(game.state === "title"){
+    drawText("GALAGA", W/2, H/2 - 130, 7, "#4fa8ff", "center", true);
+    drawText("SPRITE AND SOUND EDITION", W/2, H/2 - 80, 2, "#9fc4ff", "center");
+    blit(S.bossG0,  W/2 - 60, H/2 - 24, 0, 1.2);
+    blit(S.butter0, W/2,      H/2 - 24, 0, 1.2);
+    blit(S.bee0,    W/2 + 60, H/2 - 24, 0, 1.2);
+    drawText("150", W/2 - 60, H/2 + 4, 2, "#3ddc84", "center");
+    drawText("80",  W/2,      H/2 + 4, 2, "#ff4d5a", "center");
+    drawText("50",  W/2 + 60, H/2 + 4, 2, "#4fa8ff", "center");
+    ctx.globalAlpha = .5 + .5*Math.sin(game.time*4);
+    drawText("PRESS SPACE OR TAP", W/2, H/2 + 46, 3, "#ffd24a", "center", true);
+    ctx.globalAlpha = 1;
+    drawText("DIVING ENEMIES SCORE DOUBLE", W/2, H/2 + 100, 2, "#6f8dbd", "center");
+    drawText("BOSSES FIRE A TRACTOR BEAM", W/2, H/2 + 120, 2, "#6f8dbd", "center");
+    /* PATCH 9: third hint line teaches the new vertical control. */
+    drawText("THRUST UP TO DODGE OR BAIT THE BEAM", W/2, H/2 + 140, 2, "#6f8dbd", "center");
+  }
+  if(game.state === "gameover"){
+    ctx.fillStyle = "rgba(4,5,11,.74)"; ctx.fillRect(-20,-20,W+40,H+40);
+    drawText("GAME OVER", W/2, H/2 - 60, 5, "#ff4d5a", "center", true);
+    drawText("SCORE " + game.score, W/2, H/2, 3, "#e9f3ff", "center");
+    drawText("BEST " + game.high, W/2, H/2 + 30, 2, "#9fc4ff", "center");
+    ctx.globalAlpha = .5 + .5*Math.sin(game.time*4);
+    drawText("PRESS SPACE OR TAP", W/2, H/2 + 70, 2, "#ffd24a", "center");
+    ctx.globalAlpha = 1;
+  }
+  if(game.paused){
+    ctx.fillStyle = "rgba(4,5,11,.6)"; ctx.fillRect(-20,-20,W+40,H+40);
+    drawText("PAUSED", W/2, H/2 - 12, 5, "#ffd24a", "center", true);
+  }
+  if(game.debug){
+    ctx.setTransform(1,0,0,1,0,0);
+    /* PATCH 9: run/phase/player-y row verifies the PATCH 1 reach fix.
+       PATCH 10: adds the live keystroke buffer, cheat armed flag, and
+       charges remaining, so you can see the code register as you type. */
+    const cr = game.enemies.find(e => e.state === "capture");
+    drawText("BUF " + (game.codeBuf || "-") + " CHEAT " + (game.cheat.shield ? "ON" : "OFF") +
+             " SH " + (game.player ? game.player.shield : 0), 10, H-88, 2, "#7ce0b0");
+    drawText("RUN " + (cr && cr.cap ? cr.cap.name + " " + cr.cap.phase : "-") +
+             "  PY " + Math.round(game.player ? game.player.y : 0), 10, H-72, 2, "#7ce0b0");
+    drawText("ST " + game.state + " AUD " + (Sfx.ac ? Sfx.ac.state : "none"), 10, H-56, 2, "#7ce0b0");
+    drawText("FPS " + Math.round(game.fps), 10, H-40, 2, "#7ce0b0");
+    drawText("E " + game.enemies.length + " B " + game.bullets.length +
+             " EB " + game.eBullets.length + " FX " + game.parts.length, 10, H-24, 2, "#7ce0b0");
+  }
+}
+
+/* ==================================================================
+   8. LOOP
+================================================================== */
+/* =====================================================================
+   HARDENING NOTE (E) — THE LOOP CANNOT FREEZE
+   This is the fix for the original "press space and it freezes" report.
+   requestAnimationFrame(loop) is now the FIRST statement, so a throw in
+   update() or render() costs exactly one frame instead of ending the
+   game. Both phases are separately try/wrapped; the error is logged once
+   and painted as a red bar with an R-to-restart prompt.
+   DO NOT move the rAF call back to the bottom of this function.
+   ===================================================================== */
+function report(where, err){
+  const msg = where + ": " + (err && err.message ? err.message : String(err));
+  if(game.err !== msg){ game.err = msg; console.error("[galaga]", where, err); }
+}
+function drawCrash(){
+  try{
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.fillStyle = "rgba(60,4,10,.9)"; ctx.fillRect(0, H-64, W, 64);
+    drawText("ERROR - SEE CONSOLE (F12)", 8, H-54, 2, "#ff9aa5");
+    drawText(game.err.slice(0, 44), 8, H-36, 2, "#ffd24a");
+    drawText("PRESS R TO RESTART", 8, H-18, 2, "#9fc4ff");
+  }catch(e){}
+}
+
+let last = performance.now();
+function loop(now){
+  requestAnimationFrame(loop);
+  const dt = Math.min((now - last)/1000, 1/30);
+  last = now;
+  game.fps = game.fps*0.9 + (1/Math.max(dt, 0.0001))*0.1;
+  try{
+    if(!game.paused) update(dt); else game.time += dt*0.2;
+  }catch(err){ report("UPDATE", err); }
+  try{ render(); }
+  catch(err){ report("RENDER", err); ctx.setTransform(1,0,0,1,0,0); }
+  if(game.err) drawCrash();
+}
+requestAnimationFrame(loop);
+console.log("[galaga] loop started — SPACE to play, ` for debug overlay");
+})();
+</script>
+</body>
+</html>
