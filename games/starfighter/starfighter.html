@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-<title>Galaga — Sprite &amp; Sound Edition (patched + shield cheat)</title>
+<title>Starfighter — Neurocade</title>
 <style>
   html,body{margin:0;height:100%;background:#04050b;display:flex;align-items:center;
             justify-content:center;font-family:"Courier New",monospace;overflow:hidden;}
@@ -21,12 +21,15 @@
      in PATCH 4. IMPORTANT: ArrowUp / W used to be alternate FIRE keys and
      no longer are. Fire is now SPACE / Z / J only.
 
-     PATCH 10 NOTE: the cheat code is deliberately NOT listed here — it is
-     a cheat. It is documented in the PATCH 10 blocks below instead.
+     PATCH 11 NOTE: added ESC MENU. M REMAINS MUTE — no existing key was
+     reassigned by the navigation patch. H (title screen only) goes Home
+     to Neurocade/index.html; it is not advertised here because the title
+     screen shows its own HOME button and an "OR PRESS H" caption.
+     The c1 cheat is deliberately not listed — it is a cheat.
      =================================================================== -->
 <div>
   <canvas id="game" width="480" height="640"></canvas>
-  <div id="hint">← → ↑ ↓ MOVE&nbsp;·&nbsp;SPACE FIRE&nbsp;·&nbsp;P PAUSE&nbsp;·&nbsp;M MUTE&nbsp;·&nbsp;R RESTART&nbsp;·&nbsp;` DEBUG</div>
+  <div id="hint">← → ↑ ↓ MOVE&nbsp;·&nbsp;SPACE FIRE&nbsp;·&nbsp;P PAUSE&nbsp;·&nbsp;ESC MENU&nbsp;·&nbsp;R RESTART&nbsp;·&nbsp;M MUTE&nbsp;·&nbsp;` DEBUG</div>
 </div>
 
 <script>
@@ -184,6 +187,28 @@ const SHIELD = {
   blocksCapture: false,    // see note above
   protectsWingman: true,   // see note above
   bufferTime: 2.5          // seconds before a partially typed code expires
+};
+
+/* =====================================================================
+   PATCH 11 NOTE (part 1 of 8) — NEUROCADE NAVIGATION CONFIG  *** NEW ***
+   ---------------------------------------------------------------------
+   This game lives at   Neurocade/games/starfighter/starfighter.html
+   The arcade menu is at Neurocade/index.html
+   ...so the relative hop is ../../index.html (out of starfighter/, out
+   of games/). If you ever move the game deeper, add another "../".
+   Change homeUrl to "/index.html" instead if you would rather use an
+   absolute path from the web root — that survives file moves but breaks
+   when previewing from a subfolder or a file:// URL.
+
+   KEY MAP DECISION: M REMAINS MUTE. Nothing that already existed was
+   reassigned. Leaving a round is ESC only, and going Home is H, which is
+   accepted ONLY on the title screen so you cannot fat-finger your way
+   out of the whole page mid-dive.
+   ===================================================================== */
+const NAV = {
+  homeUrl: "../../index.html",   // Neurocade main menu
+  homeBtn: { w:104, h:26 },      // HOME button on the title screen
+  menuBtn: { w:70,  h:22 }       // MENU button during play
 };
 
 /* =====================================================================
@@ -376,7 +401,8 @@ const FONT = {
 "+":[0,0x04,0x04,0x1F,0x04,0x04,0],"/":[0x01,0x02,0x02,0x04,0x08,0x08,0x10],
 "(":[0x02,0x04,0x08,0x08,0x08,0x04,0x02],")":[0x08,0x04,0x02,0x02,0x02,0x04,0x08],
 "*":[0,0x11,0x0A,0x1F,0x0A,0x11,0],",":[0,0,0,0,0x0C,0x04,0x08],
-"'":[0x04,0x04,0,0,0,0,0],"?":[0x0E,0x11,0x01,0x06,0x04,0,0x04]
+"'":[0x04,0x04,0,0,0,0,0],"?":[0x0E,0x11,0x01,0x06,0x04,0,0x04],
+"<":[0x02,0x04,0x08,0x10,0x08,0x04,0x02],">":[0x08,0x04,0x02,0x01,0x02,0x04,0x08]
 };
 const glyphCache = new Map();
 function glyph(ch, sc, color){
@@ -447,8 +473,8 @@ window.GalagaSprites = {
                 "bossG0","bossG1","bossB0","bossB1","pshot","eshot","flameA","flameB",
                 "star0","star1","star2","boomE","boomP","beam"];
   const missing = need.filter(n => !S[n]);
-  if(missing.length) console.warn("[galaga] missing sprites:", missing);
-  else console.log("[galaga] sprites OK (" + need.length + ")");
+  if(missing.length) console.warn("[starfighter] missing sprites:", missing);
+  else console.log("[starfighter] sprites OK (" + need.length + ")");
 })();
 
 /* ==================================================================
@@ -502,7 +528,7 @@ const Sfx = {
       this.master.connect(this.ac.destination);
     }catch(e){
       this.dead = true; this.ac = null;
-      console.warn("[galaga] audio disabled:", e.message);
+      console.warn("[starfighter] audio disabled:", e.message);
     }
   },
   resume(){ try{ if(this.ac && this.ac.state === "suspended") this.ac.resume(); }catch(e){} },
@@ -619,6 +645,17 @@ const Sfx = {
                           this.hiss(.16,.09,7000,1800,6); break;
         case "shieldDown":[784,622,466,349].forEach((f,i)=>this.tone(f,f*.97,.16,"sawtooth",.07,i*.09));
                           this.hiss(.3,.08,1800,200,2,.05); break;
+
+        /* ---------------------------------------------------------------
+           PATCH 11 NOTE (part 2 of 8) — TWO UI SOUNDS
+           uiClick is a dry blip for any button press; uiBack is a soft
+           descending pair for leaving a screen, so navigation always has
+           audible feedback distinct from gameplay events.
+           --------------------------------------------------------------- */
+        case "uiClick":   this.tone(1200,900,.05,"square",.06);
+                          this.hiss(.05,.04,7000,3000,2); break;
+        case "uiBack":    this.tone(700,520,.10,"triangle",.07);
+                          this.tone(520,390,.14,"triangle",.06,.08); break;
       }
     }catch(e){}
   },
@@ -680,12 +717,22 @@ const game = {
   /* PATCH 10 NOTE (part 3 of 9) — CHEAT STATE
      cheat.shield  : is the c1 cheat currently armed? Survives across
                      lives (each respawn re-grants a full shield) but is
-                     cleared by gameOver() and startGame(), which is what
-                     makes the code need re-entering after a game ends.
+                     cleared by gameOver(), startGame() and goTitle(),
+                     which is what makes the code need re-entering after
+                     a game ends or you leave to the menu.
      codeBuf/codeT : rolling keystroke buffer and its expiry timer, so a
                      stale half-typed code cannot fire minutes later. */
   cheat:{ shield:false },
   codeBuf:"", codeT:0,
+
+  /* PATCH 11 NOTE (part 3 of 8) — CANVAS UI STATE
+     ui    : rebuilt every frame by render(); each entry is a clickable
+             rect {id,x,y,w,h} in UNTRANSFORMED canvas space. Pointer
+             handlers hit-test against this list, so buttons and their
+             hitboxes can never drift apart.
+     mouse : latest cursor position in canvas space, used for hover
+             highlighting. Parked off-screen until the mouse moves. */
+  ui:[], mouse:{ x:-999, y:-999 },
 
   bullets:[], eBullets:[], enemies:[], booms:[], parts:[], stars:[], texts:[]
 };
@@ -783,6 +830,73 @@ function tryCheat(){
   }
 }
 
+/* =====================================================================
+   PATCH 11 NOTE (part 4 of 8) — NAVIGATION + CANVAS BUTTON HELPERS  NEW
+   ---------------------------------------------------------------------
+   goTitle()  returns to the attract/start screen WITHOUT reloading the
+              page. It tears down the round the same way gameOver() does
+              (saves the high score, kills the beam hum, disarms the c1
+              cheat) but does NOT decrement lives or show GAME OVER.
+              Bound to ESC and to the on-screen MENU button.
+              NOTE: M is NOT bound here — M remains MUTE.
+   goHome()   leaves for the Neurocade menu. Saves the high score first,
+              because navigation destroys this page.
+   uiButton() draws a button AND registers its rect in game.ui. Always
+              call it with the canvas transform reset, otherwise screen
+              shake would offset the art from its hitbox.
+   uiHit()    /uiActivate() are shared by mouse and touch, so behaviour
+              is identical on desktop and mobile.
+   ===================================================================== */
+function saveHigh(){
+  game.high = Math.max(game.high, game.score);
+  Store.set("galaga_high", game.high);
+}
+function goTitle(){
+  Sfx.beam(false);
+  Sfx.play("uiBack");
+  saveHigh();
+  game.state = "title"; game.paused = false; game.err = null;
+  game.player = null; game.capture = null; game.pendingDual = false;
+  /* leaving a round disarms the cheat, same rule as GAME OVER */
+  game.cheat.shield = false; game.codeBuf = ""; game.codeT = 0;
+  game.enemies.length = 0; game.bullets.length = 0; game.eBullets.length = 0;
+  game.parts.length = 0; game.booms.length = 0; game.texts.length = 0;
+  game.shake = 0;
+  touchX = touchY = null; touchFire = false;
+}
+function goHome(){
+  Sfx.beam(false);
+  Sfx.play("uiClick");
+  saveHigh();
+  /* If your Neurocade menu ever launches games inside an IFRAME, swap the
+     line below for:  (window.top || window).location.href = NAV.homeUrl; */
+  window.location.href = NAV.homeUrl;
+}
+function uiButton(id, x, y, w, h, label, color){
+  const hot = game.mouse.x >= x && game.mouse.x <= x + w &&
+              game.mouse.y >= y && game.mouse.y <= y + h;
+  ctx.save();
+  ctx.globalAlpha = hot ? .32 : .14;
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, w, h);
+  ctx.globalAlpha = hot ? 1 : .70;
+  ctx.strokeStyle = color; ctx.lineWidth = 2;
+  if(hot){ ctx.shadowColor = color; ctx.shadowBlur = 10; }
+  ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+  ctx.restore();
+  drawText(label, x + w/2, y + (h - 14)/2, 2, hot ? "#ffffff" : color, "center");
+  game.ui.push({ id, x, y, w, h });
+}
+function uiHit(x, y){
+  for(const b of game.ui)
+    if(x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) return b.id;
+  return null;
+}
+function uiActivate(id){
+  if(id === "home") goHome();
+  else if(id === "menu") goTitle();
+}
+
 function startGame(){
   Sfx.init(); Sfx.resume(); Sfx.play("start");
   game.state = "playing"; game.paused = false; game.err = null;
@@ -802,8 +916,7 @@ function gameOver(){
   /* PATCH 10: GAME OVER disarms the cheat — the powerup does not persist
      into the next game, exactly as requested. */
   game.cheat.shield = false; game.codeBuf = ""; game.codeT = 0;
-  game.high = Math.max(game.high, game.score);
-  Store.set("galaga_high", game.high);
+  saveHigh();
 }
 function addScore(n){
   game.score += n;
@@ -835,9 +948,8 @@ addEventListener("keydown", e => {
      not spoil it (e.g. "wasdc1" + ENTER still works). The buffer expires
      after SHIELD.bufferTime seconds of no typing (ticked in update()),
      is capped at 16 chars, and none of "c" / "1" collide with an
-     existing binding (M mute, P pause, R restart, ` debug, Z/J fire).
-     ENTER keeps its old title/gameover "start game" duty; tryCheat()
-     rejects those states itself.
+     existing binding. ENTER keeps its old title/gameover "start game"
+     duty; tryCheat() rejects those states itself.
      ===================================================================== */
   if(e.code === "Enter" || e.code === "NumpadEnter"){
     tryCheat();
@@ -852,10 +964,22 @@ addEventListener("keydown", e => {
     }
   }
 
-  if(e.code === "KeyM") Sfx.toggleMute();
+  if(e.code === "KeyM") Sfx.toggleMute();     /* PATCH 11: M STAYS MUTE */
   if(e.code === "Backquote") game.debug = !game.debug;
   if(e.code === "KeyP" && (game.state === "playing" || game.paused)) game.paused = !game.paused;
   if(e.code === "KeyR") startGame();
+
+  /* =====================================================================
+     PATCH 11 NOTE (part 5 of 8) — NAVIGATION KEYS (NO REBINDS)
+     ESC leaves any live screen and returns to this game's start screen.
+     H goes Home to Neurocade/index.html, accepted ONLY on the title
+     screen so you cannot fat-finger your way out of the page mid-dive.
+     Note "h" still feeds the c1 cheat buffer — harmless, because the
+     buffer is matched with endsWith().
+     ===================================================================== */
+  if(e.code === "Escape" && game.state !== "title") goTitle();
+  if(e.code === "KeyH" && game.state === "title") goHome();
+
   if((e.code === "Space" || e.code === "Enter") && (game.state === "title" || game.state === "gameover")) startGame();
 }, { passive:false });
 addEventListener("keyup", e => { keys[e.code] = false; });
@@ -866,17 +990,30 @@ addEventListener("keyup", e => { keys[e.code] = false; });
    the bottom row exactly like keyboard players were, and could never
    enter a shallow beam. tpos() now returns {x,y}; the movement code
    targets (touchY - 44) so your fingertip does not cover the ship.
-   (The cheat is keyboard-only; there is no on-screen keypad.)
+   (The c1 cheat is keyboard-only; there is no on-screen keypad.)
    ===================================================================== */
 let touchX = null, touchY = null, touchFire = false;
 const tpos = e => {
   const r = cvs.getBoundingClientRect(), t = e.touches[0];
   return { x:(t.clientX - r.left)*(W/r.width), y:(t.clientY - r.top)*(H/r.height) };
 };
+
+/* =====================================================================
+   PATCH 11 NOTE (part 6 of 8) — POINTER INPUT FOR THE CANVAS BUTTONS
+   The touchstart handler MUST hit-test game.ui BEFORE its old
+   "tap anywhere to start" shortcut, otherwise tapping HOME on a phone
+   would just start the game instead of navigating. Mouse handlers are
+   new: mousemove only feeds hover highlighting, and mousedown activates
+   a button and nothing else — clicking empty space is deliberately inert
+   so a stray click cannot start or disturb a round.
+   ===================================================================== */
 cvs.addEventListener("touchstart", e => {
   e.preventDefault(); Sfx.init(); Sfx.resume();
+  const q = tpos(e);
+  const id = uiHit(q.x, q.y);
+  if(id){ uiActivate(id); return; }                 // button wins
   if(game.state === "title" || game.state === "gameover"){ startGame(); return; }
-  const q = tpos(e); touchX = q.x; touchY = q.y; touchFire = true;
+  touchX = q.x; touchY = q.y; touchFire = true;
 }, { passive:false });
 cvs.addEventListener("touchmove", e => {
   e.preventDefault(); const q = tpos(e); touchX = q.x; touchY = q.y;
@@ -884,6 +1021,27 @@ cvs.addEventListener("touchmove", e => {
 cvs.addEventListener("touchend",  e => {
   e.preventDefault(); touchFire = false; touchX = touchY = null;
 }, { passive:false });
+
+const mousePos = e => {
+  const r = cvs.getBoundingClientRect();
+  return { x:(e.clientX - r.left)*(W/r.width), y:(e.clientY - r.top)*(H/r.height) };
+};
+cvs.addEventListener("mousemove", e => {
+  const q = mousePos(e);
+  game.mouse.x = q.x; game.mouse.y = q.y;
+  cvs.style.cursor = uiHit(q.x, q.y) ? "pointer" : "default";
+});
+cvs.addEventListener("mouseleave", () => {
+  game.mouse.x = game.mouse.y = -999;
+  cvs.style.cursor = "default";
+});
+cvs.addEventListener("mousedown", e => {
+  Sfx.init(); Sfx.resume();
+  const q = mousePos(e);
+  game.mouse.x = q.x; game.mouse.y = q.y;
+  const id = uiHit(q.x, q.y);
+  if(id){ e.preventDefault(); uiActivate(id); }
+});
 
 /* ==================================================================
    5. WAVES / CAPTURE
@@ -1534,6 +1692,7 @@ function drawShield(p){
 function render(){
   ctx.setTransform(1,0,0,1,0,0);
   ctx.globalAlpha = 1;
+  game.ui.length = 0;   /* PATCH 11 (part 7 of 8): rebuild clickable rects each frame */
   ctx.fillStyle = "#04050b"; ctx.fillRect(0,0,W,H);
   if(game.shake > .2)
     ctx.translate(Math.round(rand(-game.shake, game.shake)), Math.round(rand(-game.shake, game.shake)));
@@ -1597,9 +1756,10 @@ function render(){
   drawText("SCORE " + String(game.score).padStart(6,"0"), 10, 10, 2, "#9fc4ff");
   drawText("HI " + String(Math.max(game.high, game.score)).padStart(6,"0"), W-10, 10, 2, "#ff9aa5", "right");
   drawText("STAGE " + game.wave, W/2, 10, 2, "#8dff9e", "center");
-  for(let i=0;i<Math.min(game.lives, 8);i++) blit(S.fighter0, 20 + i*24, H-16, 0, .75);
+  if(game.state !== "title")
+    for(let i=0;i<Math.min(game.lives, 8);i++) blit(S.fighter0, 20 + i*24, H-16, 0, .75);
   if(p && p.dual) drawText("DUAL FIGHTER", W-10, H-22, 2, "#8dffd0", "right");
-  if(Sfx.muted) drawText("MUTED", W/2, H-22, 2, "#5b7398", "center");
+  if(Sfx.muted) drawText("MUTED", W/2, H-56, 2, "#5b7398", "center");
 
   /* PATCH 10: HUD readout — pips show charges left, and an "ARMED" note
      appears if the cheat is on but the current ship has no charges (i.e.
@@ -1624,21 +1784,21 @@ function render(){
   }
 
   if(game.state === "title"){
-    drawText("GALAGA", W/2, H/2 - 130, 7, "#4fa8ff", "center", true);
-    drawText("SPRITE AND SOUND EDITION", W/2, H/2 - 80, 2, "#9fc4ff", "center");
-    blit(S.bossG0,  W/2 - 60, H/2 - 24, 0, 1.2);
-    blit(S.butter0, W/2,      H/2 - 24, 0, 1.2);
-    blit(S.bee0,    W/2 + 60, H/2 - 24, 0, 1.2);
-    drawText("150", W/2 - 60, H/2 + 4, 2, "#3ddc84", "center");
-    drawText("80",  W/2,      H/2 + 4, 2, "#ff4d5a", "center");
-    drawText("50",  W/2 + 60, H/2 + 4, 2, "#4fa8ff", "center");
+    drawText("STARFIGHTER", W/2, H/2 - 150, 5, "#4fa8ff", "center", true);
+    drawText("NEUROCADE", W/2, H/2 - 112, 2, "#9fc4ff", "center");
+    blit(S.bossG0,  W/2 - 60, H/2 - 64, 0, 1.2);
+    blit(S.butter0, W/2,      H/2 - 64, 0, 1.2);
+    blit(S.bee0,    W/2 + 60, H/2 - 64, 0, 1.2);
+    drawText("150", W/2 - 60, H/2 - 36, 2, "#3ddc84", "center");
+    drawText("80",  W/2,      H/2 - 36, 2, "#ff4d5a", "center");
+    drawText("50",  W/2 + 60, H/2 - 36, 2, "#4fa8ff", "center");
     ctx.globalAlpha = .5 + .5*Math.sin(game.time*4);
-    drawText("PRESS SPACE OR TAP", W/2, H/2 + 46, 3, "#ffd24a", "center", true);
+    drawText("PRESS SPACE OR TAP", W/2, H/2 + 4, 3, "#ffd24a", "center", true);
     ctx.globalAlpha = 1;
-    drawText("DIVING ENEMIES SCORE DOUBLE", W/2, H/2 + 100, 2, "#6f8dbd", "center");
-    drawText("BOSSES FIRE A TRACTOR BEAM", W/2, H/2 + 120, 2, "#6f8dbd", "center");
+    drawText("DIVING ENEMIES SCORE DOUBLE", W/2, H/2 + 58, 2, "#6f8dbd", "center");
+    drawText("BOSSES FIRE A TRACTOR BEAM", W/2, H/2 + 78, 2, "#6f8dbd", "center");
     /* PATCH 9: third hint line teaches the new vertical control. */
-    drawText("THRUST UP TO DODGE OR BAIT THE BEAM", W/2, H/2 + 140, 2, "#6f8dbd", "center");
+    drawText("THRUST UP TO DODGE OR BAIT THE BEAM", W/2, H/2 + 98, 2, "#6f8dbd", "center");
   }
   if(game.state === "gameover"){
     ctx.fillStyle = "rgba(4,5,11,.74)"; ctx.fillRect(-20,-20,W+40,H+40);
@@ -1653,6 +1813,28 @@ function render(){
     ctx.fillStyle = "rgba(4,5,11,.6)"; ctx.fillRect(-20,-20,W+40,H+40);
     drawText("PAUSED", W/2, H/2 - 12, 5, "#ffd24a", "center", true);
   }
+
+  /* =====================================================================
+     PATCH 11 NOTE (part 8 of 8) — ON-SCREEN NAV BUTTONS
+     Drawn LAST (except the debug overlay) so they sit on top of the
+     PAUSED / GAME OVER scrims and stay clickable there. The transform is
+     reset first: screen shake translates the canvas, and without this the
+     art would slide away from the hitbox registered in game.ui.
+       title screen    -> HOME  (leaves for Neurocade/index.html)
+       everywhere else -> MENU  (returns to this game's start screen)
+     ===================================================================== */
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.globalAlpha = 1;
+  if(game.state === "title"){
+    const b = NAV.homeBtn;
+    uiButton("home", W/2 - b.w/2, H - 62, b.w, b.h, "HOME", "#4fa8ff");
+    drawText("OR PRESS H", W/2, H - 28, 2, "#46628f", "center");
+  }else{
+    const b = NAV.menuBtn;
+    uiButton("menu", W - b.w - 10, 32, b.w, b.h, "MENU", "#ffd24a");
+    drawText("ESC", W - b.w - 20, 36, 2, "#46628f", "right");
+  }
+
   if(game.debug){
     ctx.setTransform(1,0,0,1,0,0);
     /* PATCH 9: run/phase/player-y row verifies the PATCH 1 reach fix.
@@ -1684,7 +1866,7 @@ function render(){
    ===================================================================== */
 function report(where, err){
   const msg = where + ": " + (err && err.message ? err.message : String(err));
-  if(game.err !== msg){ game.err = msg; console.error("[galaga]", where, err); }
+  if(game.err !== msg){ game.err = msg; console.error("[starfighter]", where, err); }
 }
 function drawCrash(){
   try{
@@ -1710,7 +1892,7 @@ function loop(now){
   if(game.err) drawCrash();
 }
 requestAnimationFrame(loop);
-console.log("[galaga] loop started — SPACE to play, ` for debug overlay");
+console.log("[starfighter] loop started — SPACE to play, ESC for menu, ` for debug");
 })();
 </script>
 </body>
