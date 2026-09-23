@@ -249,9 +249,20 @@
       Hidden on desktop, visible at 600px and below.
       ==========================================================
     */
-    .mobile-game-menu {
-      display: none;
-    }
+   /* The old pyramid menu is no longer used. */
+.desktop-game-menu {
+  display: none;
+}
+
+/* Carousel is always visible. */
+.mobile-game-menu {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin: 10px 0;
+  position: relative;
+  z-index: 2;
+}
 
     #arcade-footer-img {
       position: absolute;
@@ -296,21 +307,6 @@
         font-size: 0.62rem;
         line-height: 1.75;
       }
-
-      /* Hide the old crowded pyramid on phones. */
-      .desktop-game-menu {
-        display: none;
-      }
-
-      /* Show carousel instead. */
-      .mobile-game-menu {
-        position: relative;
-        z-index: 2;
-        display: block;
-        width: 100%;
-        margin: 8px 0 0;
-      }
-
       .carousel-label {
         margin: 8px 0 12px;
         color: var(--cyan);
@@ -476,7 +472,219 @@
       .carousel-label {
         font-size: 0.42rem;
       }
-    }
+      /* ==========================================================
+   ALWAYS-ON GAME CAROUSEL
+   ========================================================== */
+
+/* Hide the previous pyramid menu everywhere. */
+.desktop-game-menu,
+.button-pyramid {
+  display: none !important;
+}
+
+/* Show carousel everywhere. */
+.mobile-game-menu {
+  display: block !important;
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 850px;
+  margin: 12px auto;
+}
+
+.carousel-label {
+  margin: 8px 0 14px;
+  color: var(--cyan);
+  font-size: 0.58rem;
+  line-height: 1.6;
+  text-align: center;
+  text-shadow: 0 0 8px var(--cyan);
+  animation: pressStartFlash 1.5s steps(1, end) infinite;
+}
+
+.carousel-window {
+  width: 100%;
+  overflow: hidden;
+  perspective: 900px;
+}
+
+.carousel-track {
+  display: flex;
+  gap: 18px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding: 15px calc(50% - 140px) 22px;
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.carousel-track::-webkit-scrollbar {
+  display: none;
+}
+
+/* Individual game tiles */
+.carousel-track .carousel-game-btn {
+  flex: 0 0 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+
+  width: 280px;
+  min-width: 280px;
+  min-height: 180px;
+  margin: 0;
+  padding: 18px 14px;
+
+  border-radius: 14px;
+  font-size: 0.7rem;
+  line-height: 1.7;
+  text-align: center;
+
+  scroll-snap-align: center;
+  opacity: 0.48;
+  transform: scale(0.82) rotateY(10deg);
+
+  transition:
+    transform 180ms ease,
+    opacity 180ms ease,
+    box-shadow 180ms ease;
+}
+
+/* The game currently centered in the carousel */
+.carousel-track .carousel-game-btn.is-active {
+  opacity: 1;
+  transform: scale(1) rotateY(0deg);
+  box-shadow:
+    0 0 18px var(--green),
+    0 0 35px var(--cyan),
+    0 0 22px var(--magenta);
+}
+
+.game-icon {
+  display: block;
+  color: var(--cyan);
+  font-size: 3rem;
+  line-height: 1;
+  text-shadow:
+    0 0 8px var(--cyan),
+    0 0 16px var(--magenta);
+}
+
+.carousel-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  width: 100%;
+}
+
+/* Override any generic button { width: 100% } rules. */
+.carousel-controls .carousel-arrow {
+  width: 46px;
+  min-width: 46px;
+  min-height: 46px;
+  padding: 8px;
+  border-radius: 50%;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.carousel-arrow:disabled {
+  cursor: not-allowed;
+  opacity: 0.3;
+  box-shadow: none;
+}
+
+.carousel-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 120px;
+}
+
+.carousel-dot {
+  width: 8px;
+  min-width: 8px;
+  height: 8px;
+  min-height: 8px;
+  margin: 0;
+  padding: 0;
+  background: #555;
+  border: none;
+  border-radius: 50%;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.carousel-dot.is-active {
+  background: var(--green);
+  box-shadow: 0 0 9px var(--green);
+  transform: scale(1.35);
+}
+
+/* Smaller carousel cards on phones */
+@media (max-width: 600px) {
+  .mobile-game-menu {
+    margin: 8px 0 0;
+  }
+
+  .carousel-label {
+    font-size: 0.48rem;
+  }
+
+  .carousel-track {
+    gap: 14px;
+    padding: 10px calc(50% - 110px) 18px;
+  }
+
+  .carousel-track .carousel-game-btn {
+    flex-basis: 220px;
+    width: 220px;
+    min-width: 220px;
+    min-height: 145px;
+    padding: 14px 12px;
+    font-size: 0.58rem;
+  }
+
+  .game-icon {
+    font-size: 2.5rem;
+  }
+
+  .carousel-controls {
+    gap: 14px;
+  }
+
+  .carousel-controls .carousel-arrow {
+    width: 42px;
+    min-width: 42px;
+    min-height: 42px;
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .carousel-track {
+    padding-right: calc(50% - 95px);
+    padding-left: calc(50% - 95px);
+  }
+
+  .carousel-track .carousel-game-btn {
+    flex-basis: 190px;
+    width: 190px;
+    min-width: 190px;
+    min-height: 130px;
+    font-size: 0.5rem;
+  }
+
+  .game-icon {
+    font-size: 2.1rem;
+  }
+}
   </style>
 </head>
 
@@ -500,11 +708,6 @@
     <!-- ======================================================
          DESKTOP / TABLET GAME MENU
          ====================================================== -->
-    <div class="button-pyramid desktop-game-menu">
-      <div class="button-row">
-        <button class="game-btn" data-href="alert">Coming Soon</button>
-      </div>
-
       <div class="button-row">
         <button
           class="game-btn"
