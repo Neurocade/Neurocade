@@ -12,14 +12,6 @@
   <link rel="stylesheet" href="style.css">
 
   <style>
-    /*
-      ==========================================================
-      NEUROCADE HOME PAGE — ALWAYS-ON CAROUSEL MENU
-      These styles intentionally come after style.css so they
-      override older generic button and mobile layout styles.
-      ==========================================================
-    */
-
     :root {
       --cyan: #00ffff;
       --magenta: #ff00ff;
@@ -42,10 +34,7 @@
       box-sizing: border-box;
     }
 
-    /* ==========================================================
-       STARFIELD BACKGROUND
-       ========================================================== */
-
+    /* Starfield background */
     .starfield-bg {
       position: fixed;
       inset: 0;
@@ -65,13 +54,11 @@
       pointer-events: none;
     }
 
-    /* ==========================================================
-       ARCADE CABINET
-       ========================================================== */
-
+    /* Main arcade screen */
     .arcade-screen {
       position: relative;
       z-index: 1;
+
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -93,6 +80,7 @@
       overflow: hidden;
     }
 
+    /* CRT scanlines */
     .arcade-scanlines {
       position: absolute;
       inset: 0;
@@ -121,10 +109,6 @@
         background-position-y: 8px;
       }
     }
-
-    /* ==========================================================
-       PAGE TEXT
-       ========================================================== */
 
     h1 {
       position: relative;
@@ -173,6 +157,7 @@
     .instructions {
       position: relative;
       z-index: 2;
+
       max-width: 700px;
       margin: 0 12px 18px;
 
@@ -184,6 +169,7 @@
     .feedback {
       position: relative;
       z-index: 2;
+
       margin: 14px 0 0;
 
       font-size: 0.75rem;
@@ -191,10 +177,7 @@
       text-align: center;
     }
 
-    /* ==========================================================
-       SHARED BUTTON LOOK
-       ========================================================== */
-
+    /* Shared button appearance */
     .game-btn,
     .carousel-arrow {
       font-family: "Press Start 2P", cursive;
@@ -235,7 +218,7 @@
     }
 
     /* ==========================================================
-       ALWAYS-ON GAME CAROUSEL
+       GAME CAROUSEL
        ========================================================== */
 
     .game-carousel {
@@ -257,7 +240,6 @@
       text-align: center;
 
       text-shadow: 0 0 8px var(--cyan);
-
       animation: pressStartFlash 1.5s steps(1, end) infinite;
     }
 
@@ -286,7 +268,6 @@
       display: none;
     }
 
-    /* Each individual game selection card */
     .carousel-track .carousel-game-btn {
       flex: 0 0 280px;
 
@@ -309,12 +290,10 @@
       text-align: center;
 
       scroll-snap-align: center;
-
       opacity: 0.48;
       transform: scale(0.82) rotateY(10deg);
     }
 
-    /* The carousel card nearest the middle of the screen */
     .carousel-track .carousel-game-btn.is-active {
       opacity: 1;
       transform: scale(1) rotateY(0deg);
@@ -337,10 +316,7 @@
         0 0 16px var(--magenta);
     }
 
-    /* ==========================================================
-       CAROUSEL ARROWS AND DOTS
-       ========================================================== */
-
+    /* Carousel arrow buttons and dots */
     .carousel-controls {
       display: flex;
       align-items: center;
@@ -402,21 +378,26 @@
       transform: scale(1.35);
     }
 
-    /* ==========================================================
-       ARCADE IMAGE
-       ========================================================== */
-
+    /*
+      IMPORTANT:
+      The arcade image is NOT absolute.
+      It sits below all other content in normal layout flow.
+    */
     #arcade-footer-img {
-      position: absolute;
+      position: static !important;
       z-index: 2;
-      bottom: 18px;
-      left: 50%;
+
+      display: block !important;
+      order: 99;
+      flex-shrink: 0;
 
       width: 53%;
       max-width: 211px;
       height: auto;
 
-      transform: translateX(-50%);
+      margin: 28px auto 0 !important;
+
+      transform: none !important;
       filter: drop-shadow(0 0 12px #00ff00);
       pointer-events: none;
     }
@@ -500,24 +481,13 @@
         font-size: 0.58rem;
       }
 
-      /*
-        On a phone, the image is below the carousel rather than
-        absolutely positioned, avoiding overlap with the controls.
-      */
       #arcade-footer-img {
-        position: relative;
-        bottom: auto;
-        left: auto;
-
         width: 42vw;
         max-width: 135px;
-        margin: 8px auto 0;
-
-        transform: none;
+        margin-top: 22px !important;
       }
     }
 
-    /* Very small phones */
     @media (max-width: 380px) {
       .carousel-track {
         padding-right: calc(50% - 95px);
@@ -541,23 +511,6 @@
       .carousel-label {
         font-size: 0.42rem;
       }
-/* Keep the arcade image below content on every screen size. */
-#arcade-footer-img {
-  position: relative;
-  bottom: auto;
-  left: auto;
-
-  display: block;
-  width: 53%;
-  max-width: 211px;
-  height: auto;
-
-  margin: 20px auto 0;
-  transform: none;
-
-  flex-shrink: 0;
-  pointer-events: none;
-}
     }
   </style>
 </head>
@@ -579,9 +532,6 @@
       your skills!
     </div>
 
-    <!-- ======================================================
-         GAME CAROUSEL — USED ON ALL SCREEN SIZES
-         ====================================================== -->
     <section class="game-carousel" aria-label="Game selector">
       <p class="carousel-label">← SWIPE OR USE ARROWS TO CHOOSE A GAME →</p>
 
@@ -694,12 +644,6 @@
   <script src="starfield.js"></script>
 
   <script>
-    /*
-      ==========================================================
-      GAME NAVIGATION
-      ==========================================================
-    */
-
     const gameStartSound = new Audio("assets/sounds/gamestart.mp3");
 
     document.querySelectorAll(".game-btn").forEach((button) => {
@@ -709,9 +653,7 @@
         const href = button.getAttribute("data-href");
 
         gameStartSound.currentTime = 0;
-        gameStartSound.play().catch(() => {
-          /* Browser may prevent audio until a user interaction. */
-        });
+        gameStartSound.play().catch(() => {});
 
         if (href === "alert") {
           setTimeout(() => {
@@ -724,12 +666,6 @@
         }
       });
     });
-
-    /*
-      ==========================================================
-      CAROUSEL CONTROLS
-      ==========================================================
-    */
 
     document.addEventListener("DOMContentLoaded", () => {
       const track = document.getElementById("gameCarousel");
@@ -744,7 +680,6 @@
       const games = [...track.querySelectorAll(".carousel-game-btn")];
       let activeIndex = 0;
 
-      /* Create one navigation dot for every game. */
       games.forEach((game, index) => {
         const dot = document.createElement("button");
 
@@ -794,10 +729,6 @@
         scrollToGame(activeIndex + 1);
       });
 
-      /*
-        When the user swipes or scrolls, identify which game card
-        is nearest to the carousel's center.
-      */
       let scrollTimer;
 
       track.addEventListener("scroll", () => {
@@ -825,10 +756,6 @@
         }, 80);
       });
 
-      /*
-        Keyboard support:
-        When focused in the carousel, left/right arrows change games.
-      */
       track.addEventListener("keydown", (event) => {
         if (event.key === "ArrowLeft") {
           event.preventDefault();
@@ -845,7 +772,6 @@
 
       setActiveGame(0);
 
-      /* Center the first carousel card on every screen size. */
       requestAnimationFrame(() => {
         scrollToGame(0);
       });
