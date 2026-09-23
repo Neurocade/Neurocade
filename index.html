@@ -79,7 +79,7 @@
       width: min(90vw, 900px);
       min-height: 80vh;
       margin: 2vh auto;
-      padding: 24px 12px 145px;
+      padding: 24px 12px;
       box-sizing: border-box;
 
       border: 4px solid var(--green);
@@ -541,6 +541,23 @@
       .carousel-label {
         font-size: 0.42rem;
       }
+/* Keep the arcade image below content on every screen size. */
+#arcade-footer-img {
+  position: relative;
+  bottom: auto;
+  left: auto;
+
+  display: block;
+  width: 53%;
+  max-width: 211px;
+  height: auto;
+
+  margin: 20px auto 0;
+  transform: none;
+
+  flex-shrink: 0;
+  pointer-events: none;
+}
     }
   </style>
 </head>
