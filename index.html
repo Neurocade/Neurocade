@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NEUROCADE - Home</title>
 
   <link
@@ -14,9 +14,9 @@
   <style>
     /*
       ==========================================================
-      NEUROCADE HOME PAGE
-      This style block comes AFTER style.css intentionally.
-      It overrides older generic mobile button/layout rules.
+      NEUROCADE HOME PAGE — ALWAYS-ON CAROUSEL MENU
+      These styles intentionally come after style.css so they
+      override older generic button and mobile layout styles.
       ==========================================================
     */
 
@@ -24,7 +24,6 @@
       --cyan: #00ffff;
       --magenta: #ff00ff;
       --green: #00ff00;
-      --dark: #111111;
     }
 
     html,
@@ -35,7 +34,7 @@
 
     body {
       font-family: "Press Start 2P", cursive;
-      background: radial-gradient(circle at center, #0a0a0a, #000);
+      background: radial-gradient(circle at center, #0a0a0a, #000000);
       color: #ffffff;
       overflow-x: hidden;
       overflow-y: auto;
@@ -43,7 +42,10 @@
       box-sizing: border-box;
     }
 
-    /* Starfield background */
+    /* ==========================================================
+       STARFIELD BACKGROUND
+       ========================================================== */
+
     .starfield-bg {
       position: fixed;
       inset: 0;
@@ -60,37 +62,45 @@
       inset: 0;
       width: 100vw;
       height: 100vh;
-      z-index: 1;
       pointer-events: none;
     }
 
-    /* Main arcade cabinet */
+    /* ==========================================================
+       ARCADE CABINET
+       ========================================================== */
+
     .arcade-screen {
       position: relative;
       z-index: 1;
       display: flex;
       flex-direction: column;
       align-items: center;
+
       width: min(90vw, 900px);
       min-height: 80vh;
       margin: 2vh auto;
       padding: 24px 12px 145px;
       box-sizing: border-box;
+
       border: 4px solid var(--green);
       border-radius: 20px;
-      background: #111;
+      background: #111111;
+
       box-shadow:
         0 0 30px rgba(0, 255, 0, 0.5),
         inset 0 0 40px rgba(0, 255, 255, 0.25);
+
       overflow: hidden;
     }
 
-    /* CRT scanline effect */
     .arcade-scanlines {
-      pointer-events: none;
       position: absolute;
       inset: 0;
       z-index: 10;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+
       background: repeating-linear-gradient(
         to bottom,
         rgba(0, 0, 0, 0.08) 0,
@@ -98,6 +108,7 @@
         transparent 2px,
         transparent 6px
       );
+
       animation: scanlines-move 2.5s linear infinite;
     }
 
@@ -105,19 +116,26 @@
       from {
         background-position-y: 0;
       }
+
       to {
         background-position-y: 8px;
       }
     }
 
+    /* ==========================================================
+       PAGE TEXT
+       ========================================================== */
+
     h1 {
       position: relative;
       z-index: 2;
       margin: 0 0 18px;
-      font-size: clamp(1.6rem, 5vw, 2.2rem);
+
       color: var(--cyan);
-      text-align: center;
+      font-size: clamp(1.6rem, 5vw, 2.2rem);
       letter-spacing: 2px;
+      text-align: center;
+
       text-shadow:
         0 0 10px var(--magenta),
         0 0 20px var(--magenta),
@@ -128,11 +146,16 @@
       position: relative;
       z-index: 2;
       margin-bottom: 18px;
+
       color: var(--green);
       font-size: clamp(0.7rem, 2.6vw, 1.2rem);
-      text-align: center;
       letter-spacing: 2px;
-      text-shadow: 0 0 8px var(--green), 0 0 16px var(--green);
+      text-align: center;
+
+      text-shadow:
+        0 0 8px var(--green),
+        0 0 16px var(--green);
+
       animation: pressStartFlash 1.1s steps(1, end) infinite;
     }
 
@@ -141,6 +164,7 @@
       100% {
         opacity: 1;
       }
+
       50% {
         opacity: 0.2;
       }
@@ -151,6 +175,7 @@
       z-index: 2;
       max-width: 700px;
       margin: 0 12px 18px;
+
       font-size: 0.8rem;
       line-height: 1.7;
       text-align: center;
@@ -160,15 +185,16 @@
       position: relative;
       z-index: 2;
       margin: 14px 0 0;
+
       font-size: 0.75rem;
+      line-height: 1.6;
       text-align: center;
     }
 
-    /*
-      ==========================================================
-      SHARED GAME BUTTON LOOK
-      ==========================================================
-    */
+    /* ==========================================================
+       SHARED BUTTON LOOK
+       ========================================================== */
+
     .game-btn,
     .carousel-arrow {
       font-family: "Press Start 2P", cursive;
@@ -176,9 +202,14 @@
       background: var(--magenta);
       border: none;
       cursor: pointer;
-      box-shadow: 0 0 12px var(--green), 0 0 20px var(--cyan);
+
+      box-shadow:
+        0 0 12px var(--green),
+        0 0 20px var(--cyan);
+
       transition:
         transform 0.2s ease,
+        opacity 0.2s ease,
         box-shadow 0.2s ease,
         background 0.2s ease;
     }
@@ -187,9 +218,10 @@
     .game-btn:focus-visible,
     .carousel-arrow:hover,
     .carousel-arrow:focus-visible {
-      outline: none;
-      background: #282828;
       color: var(--green);
+      background: #282828;
+      outline: none;
+
       box-shadow:
         0 0 22px var(--green),
         0 0 30px var(--cyan),
@@ -202,80 +234,196 @@
       outline-offset: 4px;
     }
 
-    /*
-      ==========================================================
-      DESKTOP / TABLET PYRAMID
-      ==========================================================
-    */
-    .button-pyramid {
+    /* ==========================================================
+       ALWAYS-ON GAME CAROUSEL
+       ========================================================== */
+
+    .game-carousel {
       position: relative;
       z-index: 2;
+
+      display: block;
+      width: 100%;
+      max-width: 850px;
+      margin: 12px auto;
+    }
+
+    .carousel-label {
+      margin: 8px 0 14px;
+
+      color: var(--cyan);
+      font-size: 0.58rem;
+      line-height: 1.6;
+      text-align: center;
+
+      text-shadow: 0 0 8px var(--cyan);
+
+      animation: pressStartFlash 1.5s steps(1, end) infinite;
+    }
+
+    .carousel-window {
+      width: 100%;
+      overflow: hidden;
+      perspective: 900px;
+    }
+
+    .carousel-track {
+      display: flex;
+      gap: 18px;
+
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+
+      padding: 15px calc(50% - 140px) 22px;
+
+      scroll-behavior: smooth;
+      scroll-snap-type: x mandatory;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .carousel-track::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* Each individual game selection card */
+    .carousel-track .carousel-game-btn {
+      flex: 0 0 280px;
+
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 10px;
-      width: 100%;
-      margin: 12px 0;
-    }
-
-    .button-pyramid .button-row {
-      display: flex;
-      flex-wrap: wrap;
       justify-content: center;
-      gap: 10px;
-      width: 100%;
+      gap: 18px;
+
+      width: 280px;
+      min-width: 280px;
+      min-height: 180px;
+      margin: 0;
+      padding: 18px 14px;
+
+      border-radius: 14px;
+
+      font-size: 0.7rem;
+      line-height: 1.7;
+      text-align: center;
+
+      scroll-snap-align: center;
+
+      opacity: 0.48;
+      transform: scale(0.82) rotateY(10deg);
     }
 
-    .button-pyramid .game-btn {
+    /* The carousel card nearest the middle of the screen */
+    .carousel-track .carousel-game-btn.is-active {
+      opacity: 1;
+      transform: scale(1) rotateY(0deg);
+
+      box-shadow:
+        0 0 18px var(--green),
+        0 0 35px var(--cyan),
+        0 0 22px var(--magenta);
+    }
+
+    .game-icon {
+      display: block;
+
+      color: var(--cyan);
+      font-size: 3rem;
+      line-height: 1;
+
+      text-shadow:
+        0 0 8px var(--cyan),
+        0 0 16px var(--magenta);
+    }
+
+    /* ==========================================================
+       CAROUSEL ARROWS AND DOTS
+       ========================================================== */
+
+    .carousel-controls {
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 170px;
-      min-height: 58px;
-      padding: 10px;
-      border-radius: 8px;
-      font-size: 0.62rem;
-      line-height: 1.5;
-      text-align: center;
+      gap: 18px;
+      width: 100%;
     }
 
-    .button-pyramid .game-btn:hover {
-      transform: translateY(-3px);
+    .carousel-controls .carousel-arrow {
+      width: 46px;
+      min-width: 46px;
+      min-height: 46px;
+      padding: 8px;
+
+      border-radius: 50%;
+
+      font-size: 0.9rem;
+      line-height: 1;
     }
 
-    /*
-      ==========================================================
-      MOBILE CAROUSEL
-      Hidden on desktop, visible at 600px and below.
-      ==========================================================
-    */
-   /* The old pyramid menu is no longer used. */
-.desktop-game-menu {
-  display: none;
-}
+    .carousel-arrow:disabled {
+      cursor: not-allowed;
+      opacity: 0.3;
+      box-shadow: none;
+    }
 
-/* Carousel is always visible. */
-.mobile-game-menu {
-  display: block;
-  width: 100%;
-  max-width: 100%;
-  margin: 10px 0;
-  position: relative;
-  z-index: 2;
-}
+    .carousel-arrow:disabled:hover {
+      color: #ffffff;
+      background: var(--magenta);
+      box-shadow: none;
+    }
+
+    .carousel-dots {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      min-width: 120px;
+    }
+
+    .carousel-dot {
+      width: 8px;
+      min-width: 8px;
+      height: 8px;
+      min-height: 8px;
+      margin: 0;
+      padding: 0;
+
+      background: #555555;
+      border: none;
+      border-radius: 50%;
+      box-shadow: none;
+      cursor: pointer;
+    }
+
+    .carousel-dot.is-active {
+      background: var(--green);
+      box-shadow: 0 0 9px var(--green);
+      transform: scale(1.35);
+    }
+
+    /* ==========================================================
+       ARCADE IMAGE
+       ========================================================== */
 
     #arcade-footer-img {
       position: absolute;
       z-index: 2;
       bottom: 18px;
       left: 50%;
+
       width: 53%;
       max-width: 211px;
       height: auto;
+
       transform: translateX(-50%);
       filter: drop-shadow(0 0 12px #00ff00);
       pointer-events: none;
     }
+
+    /* ==========================================================
+       PHONE STYLES
+       ========================================================== */
 
     @media (max-width: 600px) {
       body {
@@ -287,9 +435,9 @@
         min-height: 100vh;
         margin: 0;
         padding: 16px 8px 22px;
+
         border-width: 2px;
         border-radius: 0;
-        overflow: hidden;
       }
 
       h1 {
@@ -307,150 +455,69 @@
         font-size: 0.62rem;
         line-height: 1.75;
       }
-      .carousel-label {
-        margin: 8px 0 12px;
-        color: var(--cyan);
-        font-size: 0.48rem;
-        line-height: 1.6;
-        text-align: center;
-        text-shadow: 0 0 8px var(--cyan);
-        animation: pressStartFlash 1.5s steps(1, end) infinite;
+
+      .game-carousel {
+        margin: 8px 0 0;
       }
 
-      .carousel-window {
-        width: 100%;
-        overflow: hidden;
-        perspective: 700px;
+      .carousel-label {
+        font-size: 0.48rem;
       }
 
       .carousel-track {
-        display: flex;
         gap: 14px;
-        overflow-x: auto;
-        overscroll-behavior-x: contain;
         padding: 10px calc(50% - 110px) 18px;
-        scroll-behavior: smooth;
-        scroll-snap-type: x mandatory;
-        scrollbar-width: none;
-        -webkit-overflow-scrolling: touch;
       }
 
-      .carousel-track::-webkit-scrollbar {
-        display: none;
-      }
-
-      /*
-        These selectors intentionally override generic rules such as:
-        ".game-btn, button { width: 100%; }"
-        that may still exist in style.css.
-      */
       .carousel-track .carousel-game-btn {
-        flex: 0 0 220px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 15px;
+        flex-basis: 220px;
+
         width: 220px;
         min-width: 220px;
         min-height: 145px;
-        margin: 0;
         padding: 14px 12px;
-        border-radius: 12px;
-        font-size: 0.58rem;
-        line-height: 1.65;
-        text-align: center;
-        scroll-snap-align: center;
-        opacity: 0.48;
-        transform: scale(0.84) rotateY(8deg);
-      }
 
-      .carousel-track .carousel-game-btn.is-active {
-        opacity: 1;
-        transform: scale(1) rotateY(0deg);
-        box-shadow:
-          0 0 16px var(--green),
-          0 0 30px var(--cyan),
-          0 0 20px var(--magenta);
+        font-size: 0.58rem;
       }
 
       .game-icon {
-        display: block;
-        color: var(--cyan);
         font-size: 2.5rem;
-        line-height: 1;
-        text-shadow:
-          0 0 8px var(--cyan),
-          0 0 16px var(--magenta);
       }
 
       .carousel-controls {
-        display: flex;
-        align-items: center;
-        justify-content: center;
         gap: 14px;
-        width: 100%;
       }
 
       .carousel-controls .carousel-arrow {
         width: 42px;
         min-width: 42px;
         min-height: 42px;
-        padding: 8px;
-        border-radius: 50%;
         font-size: 0.85rem;
-        line-height: 1;
-      }
-
-      .carousel-dots {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        min-width: 105px;
-      }
-
-      .carousel-dot {
-        width: 7px;
-        min-width: 7px;
-        height: 7px;
-        min-height: 7px;
-        margin: 0;
-        padding: 0;
-        background: #555555;
-        border: none;
-        border-radius: 50%;
-        box-shadow: none;
-        cursor: pointer;
-      }
-
-      .carousel-dot.is-active {
-        background: var(--green);
-        box-shadow: 0 0 9px var(--green);
-        transform: scale(1.35);
       }
 
       .feedback {
         margin: 14px 6px 10px;
         font-size: 0.58rem;
-        line-height: 1.6;
       }
 
       /*
-        The footer image becomes a normal element on mobile,
-        preventing it from overlapping carousel controls.
+        On a phone, the image is below the carousel rather than
+        absolutely positioned, avoiding overlap with the controls.
       */
       #arcade-footer-img {
         position: relative;
         bottom: auto;
         left: auto;
+
         width: 42vw;
         max-width: 135px;
         margin: 8px auto 0;
+
         transform: none;
       }
     }
 
+    /* Very small phones */
     @media (max-width: 380px) {
       .carousel-track {
         padding-right: calc(50% - 95px);
@@ -459,9 +526,11 @@
 
       .carousel-track .carousel-game-btn {
         flex-basis: 190px;
+
         width: 190px;
         min-width: 190px;
         min-height: 130px;
+
         font-size: 0.5rem;
       }
 
@@ -472,219 +541,7 @@
       .carousel-label {
         font-size: 0.42rem;
       }
-      /* ==========================================================
-   ALWAYS-ON GAME CAROUSEL
-   ========================================================== */
-
-/* Hide the previous pyramid menu everywhere. */
-.desktop-game-menu,
-.button-pyramid {
-  display: none !important;
-}
-
-/* Show carousel everywhere. */
-.mobile-game-menu {
-  display: block !important;
-  position: relative;
-  z-index: 2;
-  width: 100%;
-  max-width: 850px;
-  margin: 12px auto;
-}
-
-.carousel-label {
-  margin: 8px 0 14px;
-  color: var(--cyan);
-  font-size: 0.58rem;
-  line-height: 1.6;
-  text-align: center;
-  text-shadow: 0 0 8px var(--cyan);
-  animation: pressStartFlash 1.5s steps(1, end) infinite;
-}
-
-.carousel-window {
-  width: 100%;
-  overflow: hidden;
-  perspective: 900px;
-}
-
-.carousel-track {
-  display: flex;
-  gap: 18px;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  padding: 15px calc(50% - 140px) 22px;
-  scroll-behavior: smooth;
-  scroll-snap-type: x mandatory;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
-}
-
-.carousel-track::-webkit-scrollbar {
-  display: none;
-}
-
-/* Individual game tiles */
-.carousel-track .carousel-game-btn {
-  flex: 0 0 280px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 18px;
-
-  width: 280px;
-  min-width: 280px;
-  min-height: 180px;
-  margin: 0;
-  padding: 18px 14px;
-
-  border-radius: 14px;
-  font-size: 0.7rem;
-  line-height: 1.7;
-  text-align: center;
-
-  scroll-snap-align: center;
-  opacity: 0.48;
-  transform: scale(0.82) rotateY(10deg);
-
-  transition:
-    transform 180ms ease,
-    opacity 180ms ease,
-    box-shadow 180ms ease;
-}
-
-/* The game currently centered in the carousel */
-.carousel-track .carousel-game-btn.is-active {
-  opacity: 1;
-  transform: scale(1) rotateY(0deg);
-  box-shadow:
-    0 0 18px var(--green),
-    0 0 35px var(--cyan),
-    0 0 22px var(--magenta);
-}
-
-.game-icon {
-  display: block;
-  color: var(--cyan);
-  font-size: 3rem;
-  line-height: 1;
-  text-shadow:
-    0 0 8px var(--cyan),
-    0 0 16px var(--magenta);
-}
-
-.carousel-controls {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 18px;
-  width: 100%;
-}
-
-/* Override any generic button { width: 100% } rules. */
-.carousel-controls .carousel-arrow {
-  width: 46px;
-  min-width: 46px;
-  min-height: 46px;
-  padding: 8px;
-  border-radius: 50%;
-  font-size: 0.9rem;
-  line-height: 1;
-}
-
-.carousel-arrow:disabled {
-  cursor: not-allowed;
-  opacity: 0.3;
-  box-shadow: none;
-}
-
-.carousel-dots {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  min-width: 120px;
-}
-
-.carousel-dot {
-  width: 8px;
-  min-width: 8px;
-  height: 8px;
-  min-height: 8px;
-  margin: 0;
-  padding: 0;
-  background: #555;
-  border: none;
-  border-radius: 50%;
-  box-shadow: none;
-  cursor: pointer;
-}
-
-.carousel-dot.is-active {
-  background: var(--green);
-  box-shadow: 0 0 9px var(--green);
-  transform: scale(1.35);
-}
-
-/* Smaller carousel cards on phones */
-@media (max-width: 600px) {
-  .mobile-game-menu {
-    margin: 8px 0 0;
-  }
-
-  .carousel-label {
-    font-size: 0.48rem;
-  }
-
-  .carousel-track {
-    gap: 14px;
-    padding: 10px calc(50% - 110px) 18px;
-  }
-
-  .carousel-track .carousel-game-btn {
-    flex-basis: 220px;
-    width: 220px;
-    min-width: 220px;
-    min-height: 145px;
-    padding: 14px 12px;
-    font-size: 0.58rem;
-  }
-
-  .game-icon {
-    font-size: 2.5rem;
-  }
-
-  .carousel-controls {
-    gap: 14px;
-  }
-
-  .carousel-controls .carousel-arrow {
-    width: 42px;
-    min-width: 42px;
-    min-height: 42px;
-    font-size: 0.85rem;
-  }
-}
-
-@media (max-width: 380px) {
-  .carousel-track {
-    padding-right: calc(50% - 95px);
-    padding-left: calc(50% - 95px);
-  }
-
-  .carousel-track .carousel-game-btn {
-    flex-basis: 190px;
-    width: 190px;
-    min-width: 190px;
-    min-height: 130px;
-    font-size: 0.5rem;
-  }
-
-  .game-icon {
-    font-size: 2.1rem;
-  }
-}
+    }
   </style>
 </head>
 
@@ -706,75 +563,14 @@
     </div>
 
     <!-- ======================================================
-         DESKTOP / TABLET GAME MENU
+         GAME CAROUSEL — USED ON ALL SCREEN SIZES
          ====================================================== -->
-      <div class="button-row">
-        <button
-          class="game-btn"
-          data-href="games/classicmatching/game.html"
-        >
-          Classic Matching Game
-        </button>
-
-        <button
-          class="game-btn"
-          data-href="games/duelnback/duelnback.html"
-        >
-          Dual N-Back
-        </button>
-
-        <button
-          class="game-btn"
-          data-href="games/Auditory-NBack/auditorynbackgame.html"
-        >
-          Auditory N-Back
-        </button>
-      </div>
-
-      <div class="button-row">
-        <button class="game-btn" data-href="alert">
-          Driving Directions Game
-        </button>
-
-        <button
-          class="game-btn"
-          data-href="games/pacedvisualnumericalnback/pvnnbgame.html"
-        >
-          Paced Visual N-Back
-        </button>
-
-        <button
-          class="game-btn"
-          data-href="games/memorytrace/memorytrace.html"
-        >
-          Memory Trace
-        </button>
-
-        <button
-          class="game-btn"
-          data-href="games/engrams/engrams.html"
-        >
-          Engrams
-        </button>
-
-        <button
-          class="game-btn"
-          data-href="games/starfighter/starfighter.html"
-        >
-          Star*Fighter
-        </button>
-      </div>
-    </div>
-
-    <!-- ======================================================
-         MOBILE GAME CAROUSEL
-         Swipe left/right, use arrows, or tap dots.
-         ====================================================== -->
-    <section class="game-carousel mobile-game-menu" aria-label="Game selector">
-      <p class="carousel-label">← SWIPE TO CHOOSE A GAME →</p>
+    <section class="game-carousel" aria-label="Game selector">
+      <p class="carousel-label">← SWIPE OR USE ARROWS TO CHOOSE A GAME →</p>
 
       <div class="carousel-window">
         <div class="carousel-track" id="gameCarousel">
+
           <button class="game-btn carousel-game-btn" data-href="alert">
             <span class="game-icon" aria-hidden="true">?</span>
             <span>Coming Soon</span>
@@ -840,6 +636,7 @@
             <span class="game-icon" aria-hidden="true">✈</span>
             <span>Star*Fighter</span>
           </button>
+
         </div>
       </div>
 
@@ -882,10 +679,10 @@
   <script>
     /*
       ==========================================================
-      GAME BUTTON NAVIGATION
-      Works for both desktop pyramid buttons and mobile carousel.
+      GAME NAVIGATION
       ==========================================================
     */
+
     const gameStartSound = new Audio("assets/sounds/gamestart.mp3");
 
     document.querySelectorAll(".game-btn").forEach((button) => {
@@ -896,7 +693,7 @@
 
         gameStartSound.currentTime = 0;
         gameStartSound.play().catch(() => {
-          /* Audio may be blocked until browser interaction policies allow it. */
+          /* Browser may prevent audio until a user interaction. */
         });
 
         if (href === "alert") {
@@ -913,9 +710,10 @@
 
     /*
       ==========================================================
-      MOBILE CAROUSEL CONTROLS
+      CAROUSEL CONTROLS
       ==========================================================
     */
+
     document.addEventListener("DOMContentLoaded", () => {
       const track = document.getElementById("gameCarousel");
       const previousButton = document.getElementById("carouselPrev");
@@ -929,16 +727,13 @@
       const games = [...track.querySelectorAll(".carousel-game-btn")];
       let activeIndex = 0;
 
-      /* Create one dot for each carousel game. */
+      /* Create one navigation dot for every game. */
       games.forEach((game, index) => {
         const dot = document.createElement("button");
 
         dot.type = "button";
         dot.className = "carousel-dot";
-        dot.setAttribute(
-          "aria-label",
-          "Select " + game.innerText.trim()
-        );
+        dot.setAttribute("aria-label", "Select " + game.innerText.trim());
 
         dot.addEventListener("click", () => {
           scrollToGame(index);
@@ -983,8 +778,8 @@
       });
 
       /*
-        After a finger swipe, find which card is closest to the
-        center of the carousel and highlight it.
+        When the user swipes or scrolls, identify which game card
+        is nearest to the carousel's center.
       */
       let scrollTimer;
 
@@ -1014,7 +809,8 @@
       });
 
       /*
-        Allows keyboard navigation when a carousel item has focus.
+        Keyboard support:
+        When focused in the carousel, left/right arrows change games.
       */
       track.addEventListener("keydown", (event) => {
         if (event.key === "ArrowLeft") {
@@ -1032,11 +828,10 @@
 
       setActiveGame(0);
 
-      if (window.matchMedia("(max-width: 600px)").matches) {
-        requestAnimationFrame(() => {
-          scrollToGame(0);
-        });
-      }
+      /* Center the first carousel card on every screen size. */
+      requestAnimationFrame(() => {
+        scrollToGame(0);
+      });
     });
   </script>
 </body>
